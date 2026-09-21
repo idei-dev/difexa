@@ -1,0 +1,24 @@
+<?php
+
+namespace App\UI\Screens;
+
+use Idei\Usim\Screen;
+use Idei\Usim\Components\Container;
+use Idei\Usim\UI;
+use Idei\Usim\ValueObjects\Size;
+use Idei\Usim\ValueObjects\Spacing;
+
+class Home extends Screen
+{
+    protected function buildBaseUI(Container $container, ...$params): void
+    {
+        $container
+            ->plain()
+            ->padding(Spacing::px(0));
+         $container->add(
+            UI::label('landing_lbl')
+                ->html('landing', ['title' => env('APP_NAME', 'USIM Framework')])
+                ->width(Size::full())
+        )->plain();
+    }
+}

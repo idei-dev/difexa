@@ -1,0 +1,191 @@
+<?php
+// @usim: feature="admin", type="screen"
+namespace App\UI\Screens\Auth;
+
+use App\Services\Auth\AuthSessionService;
+use App\Services\Auth\LoginService;
+use App\Services\Units\UsimUnitsService;
+use Idei\Usim\Components\Container;
+use Idei\Usim\Components\Label;
+use Idei\Usim\Enums\JustifyContent;
+use Idei\Usim\Enums\LayoutType;
+use Idei\Usim\Enums\Visibility;
+use Idei\Usim\Screen;
+use Idei\Usim\UI;
+use Idei\Usim\ValueObjects\Size;
+use Idei\Usim\ValueObjects\Spacing;
+
+class Login extends Screen
+{
+    public function __construct(
+        protected LoginService $loginService,
+        protected AuthSessionService $authSessionService,
+        protected UsimUnitsService $usimUnitsService
+    ) {}
+
+    public static Visibility $visibility = Visibility::GUEST;
+
+    protected string $store_email = '';
+    protected string $store_token = '';
+    protected string $store_unit = '';
+    protected Label $lbl_login_result;
+
+    public static function authorize(): bool
+    {
+        // This screen should only be accessible to guests,
+        // i.e. users who are not authenticated.
+        return !self::requireAuth();
+    }
+
+    public static function getMenuLabel(): string
+    {
+        return 'Login';
+    }
+
+    public static function getMenuIcon(): ?string
+    {
+        return '🔑';
+    }
+
+    protected function buildBaseUI(Container $container, ...$params): void
+    {
+        $email = '';
+        $password = '';
+
+        if (config('app.env') === 'local') {
+            // Pre-fill credentials in local environment for easier testing
+            $email = empty($this->store_email)
+                ? config('usim.users.root.email')
+                : $this->store_email;
+            $password = config('usim.users.root.password');
+        }
+
+        $container
+            ->title(t('screen.auth.login.title'))
+            ->maxWidth(Size::px(450))
+            ->centerHorizontal()
+            ->shadow(3)
+            ->padding(Spacing::px(30));
+
+        $container->add(
+            UI::input('login_email')
+                ->label(t('screen.auth.login.email.label'))
+                ->placeholder(t('screen.auth.login.email.placeholder'))
+                ->value($email)
+                ->type('email')
+                ->required(true)
+                ->width(Size::full())
+        );
+
+        $container->add(
+            UI::input('login_password')
+                ->label(t('screen.auth.login.password.label'))
+                ->type('password')
+                ->placeholder(t('screen.auth.login.password.placeholder'))
+                ->value($password)
+                ->required(true)
+                ->width(Size::full())
+        );
+
+        $container->add(
+            UI::label('lbl_login_result')->text('')
+        );
+
+        $buttonsContainer = UI::container('login_buttons')
+            ->layout(LayoutType::HORIZONTAL)
+            ->justifyContent(JustifyContent::SPACE_BETWEEN)
+            ->plain()
+            ->gap(Spacing::px(10))
+            ->shadow(false)
+            ->padding(Spacing::each(Spacing::px(20)));
+
+        $buttonsContainer->add(
+            UI::button('btn_cancel_login')
+                ->label(t('screen.auth.login.actions.cancel'))
+                ->style('secondary')
+                ->action('close_login_dialog')
+        );
+
+        $buttonsContainer->add(
+            UI::button('btn_submit_login')
+                ->label(t('screen.auth.login.actions.submit'))
+                ->style('primary')
+                ->action('submit_login')
+        );
+
+        $container->add($buttonsContainer);
+
+        // Forgot Password Link left-aligned below the buttons and filled with the full width of the container
+        $container->add(
+            UI::button('btn_forgot_password')
+                ->label(t('screen.auth.login.actions.forgot_password'))
+                ->style('link')
+                ->action('navigate_forgot_password')
+                ->width(Size::full())
+        );
+    }
+
+    protected function postLoadUI(): void
+    {
+        $this->lbl_login_result->text('')->style('');
+    }
+
+    /** @param array<string, mixed> $params */
+    public function onNavigateForgotPassword(array $params): void
+    {
+        $this->redirect('/auth/forgot-password');
+    }
+
+    /** @param array<string, mixed> $params */
+    public function onSubmitLogin(array $params): void
+    {
+        $emailValue = $params['login_email'] ?? '';
+        $passwordValue = $params['login_password'] ?? '';
+        $email = \is_string($emailValue) ? $emailValue : '';
+        $password = \is_string($passwordValue) ? $passwordValue : '';
+        $remember = $params['remember'] ?? false;
+
+        $response = $this->loginService->login($email, $password, (bool) $remember);
+
+        $message = $response['message'];
+        $status = $response['status'];
+        $this->toast(
+            message: $message,
+            type: $status,
+            position: 'top-middle',
+        );
+        $this->lbl_login_result->text($message)->style($status);
+
+        if ($response['status'] === 'error') {
+            return;
+        }
+
+        $this->store_token = $response['data']['token'];
+        $this->store_email = $email;
+
+        /** @var \App\Models\User $user */
+        $user = $response['user'];
+
+        $unitsWithRoles = $this->usimUnitsService->getUserUnitsWithRoles($user);
+
+        if (
+            empty($this->store_unit) ||
+            !\array_key_exists($this->store_unit, $unitsWithRoles)
+        ) {
+            $firstUnit = array_key_first($unitsWithRoles);
+            $this->store_unit = is_string($firstUnit) ? $firstUnit : '';
+        }
+
+        $redirectTo = $this->authSessionService->start(
+            $user,
+            $this->store_unit !== '' ? $this->store_unit : null,
+            $this->store_token !== '' ? $this->store_token : null
+        );
+        $this->redirect($redirectTo);
+    }
+
+    public function onCloseLoginDialog(): void
+    {
+        $this->redirect('/');
+    }
+}
