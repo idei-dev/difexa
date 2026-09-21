@@ -43,7 +43,7 @@ class PostManager extends Screen
 
     public static function authorize(): bool
     {
-        return Auth::check();
+        return self::requirePermission('member.post_manager.access');
     }
 
     public static function getMenuLabel(): string

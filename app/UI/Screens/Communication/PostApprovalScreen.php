@@ -43,10 +43,7 @@ class PostApprovalScreen extends Screen
 
     public static function authorize(): bool
     {
-        /** @var User|null $user */
-        $user = Auth::user();
-
-        return $user !== null && $user->isCommunicationMember();
+        return self::requirePermission('communication.post_approval.access');
     }
 
     public static function getMenuLabel(): string
