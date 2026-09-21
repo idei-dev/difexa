@@ -26,3 +26,4 @@ Homestead.yaml
 Thumbs.db
 rr
 .rr.yaml
+.env.before_lerd
