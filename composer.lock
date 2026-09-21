@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "534fd946c0b4854625f7a8556f6160d7",
+    "content-hash": "ecbfd1f40891fa3d5a71257d220e4978",
     "packages": [
         {
             "name": "brick/math",
@@ -1180,16 +1180,16 @@
         },
         {
             "name": "idei/usim",
-            "version": "0.26.2",
+            "version": "v0.27.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/idei/usim.git",
-                "reference": "a218398c0a97fc8cc098e150bec91e5679fdbd43"
+                "reference": "cccc0151b0b8c7ce3016507052cea6418bb4f01b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/idei/usim/zipball/a218398c0a97fc8cc098e150bec91e5679fdbd43",
-                "reference": "a218398c0a97fc8cc098e150bec91e5679fdbd43",
+                "url": "https://api.github.com/repos/idei/usim/zipball/cccc0151b0b8c7ce3016507052cea6418bb4f01b",
+                "reference": "cccc0151b0b8c7ce3016507052cea6418bb4f01b",
                 "shasum": ""
             },
             "require": {
@@ -1246,7 +1246,7 @@
                 "issues": "https://github.com/idei/usim/issues",
                 "source": "https://github.com/idei/usim"
             },
-            "time": "2026-09-20T19:14:58+00:00"
+            "time": "2026-09-21T16:04:25+00:00"
         },
         {
             "name": "laminas/laminas-diactoros",
@@ -1910,16 +1910,16 @@
         },
         {
             "name": "league/commonmark",
-            "version": "2.10.1",
+            "version": "2.10.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/thephpleague/commonmark.git",
-                "reference": "9d489ab67a02960fd8ffe624d93f751daf95439e"
+                "reference": "6efbd9c472b91db0a3350fcd601c8332c2382e1f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/thephpleague/commonmark/zipball/9d489ab67a02960fd8ffe624d93f751daf95439e",
-                "reference": "9d489ab67a02960fd8ffe624d93f751daf95439e",
+                "url": "https://api.github.com/repos/thephpleague/commonmark/zipball/6efbd9c472b91db0a3350fcd601c8332c2382e1f",
+                "reference": "6efbd9c472b91db0a3350fcd601c8332c2382e1f",
                 "shasum": ""
             },
             "require": {
@@ -2013,7 +2013,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-09-07T13:44:26+00:00"
+            "time": "2026-09-21T13:07:34+00:00"
         },
         {
             "name": "league/config",
@@ -11436,5 +11436,5 @@
         "php": "^8.4"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }
