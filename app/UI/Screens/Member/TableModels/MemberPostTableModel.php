@@ -6,6 +6,7 @@ use App\Enums\PostStatus;
 use App\Enums\PostType;
 use App\Models\Post;
 use App\Services\Post\PostListingService;
+use Auth;
 use Idei\Usim\Components\Table;
 use Idei\Usim\DataTable\AbstractListingTableModel;
 
@@ -34,9 +35,10 @@ class MemberPostTableModel extends AbstractListingTableModel
     protected function resolveListingService(): PostListingService
     {
         $service = app(PostListingService::class);
-        if ($this->authorId !== null) {
-            $service->forAuthor($this->authorId);
-        }
+        $service->forAuthor(Auth::id());
+        // if ($this->authorId !== null) {
+        //     $service->forAuthor($this->authorId);
+        // }
 
         return $service;
     }

@@ -47,4 +47,8 @@ return [
         'name' => 'Hardware Sensor',
         'description' => 'IoT data provider.',
     ],
+    'reviewer' => [
+        'name' => 'Reviewer',
+        'description' => 'User responsible for reviewing and approving content.',
+    ],
 ];

@@ -5,6 +5,7 @@ use App\UI\Screens\Admin\UsersManager;
 use App\UI\Screens\Device\KioskScreen;
 use App\UI\Screens\Home;
 use App\UI\Screens\Registered;
+use App\UI\Screens\Communication\PostApprovalScreen;
 
 return [
 
@@ -155,78 +156,6 @@ return [
                 'main' => ['root'],
             ],
         ],
-
-        'admin' => [
-            'first_name' => 'Admin',
-            'last_name' => 'User',
-            'email' => 'admin@example.com',
-            'password' => '11111111',
-            'unit_roles' => [
-                'oafa' => ['admin'],
-                'ingeo' => ['admin'],
-                'idei' => ['translator'],
-            ],
-        ],
-
-        'test' => [
-            'first_name' => 'Test',
-            'last_name' => 'User',
-            'email' => 'test@example.com',
-            'password' => '11111111',
-            'unit_roles' => [
-                'idei' => ['admin', 'translator'],
-            ],
-        ],
-
-        'test2' => [
-            'first_name' => 'Test2',
-            'last_name' => 'User2',
-            'email' => 'test2@example.com',
-            'password' => '11111111',
-            'unit_roles' => [
-                'ingeo' => ['admin'],
-            ],
-        ],
-
-        'test3' => [
-            'first_name' => 'Test3',
-            'last_name' => 'User3',
-            'email' => 'test3@example.com',
-            'password' => '11111111',
-            'unit_roles' => [
-                'oafa' => ['admin'],
-            ],
-        ],
-
-        'com-admin' => [
-            'first_name' => 'Comunicación',
-            'last_name' => 'User',
-            'email' => 'comunicacion@example.com',
-            'password' => '11111111',
-            'unit_roles' => [
-                'comunicación' => ['admin'],
-            ],
-        ],
-
-        'idei-user-1' => [
-            'first_name' => 'Idei',
-            'last_name' => 'User',
-            'email' => 'idei@example.com',
-            'password' => '11111111',
-            'unit_roles' => [
-                'idei' => ['member'],
-            ],
-        ],
-
-        'registered-user' => [
-            'first_name' => 'Registered',
-            'last_name' => 'User',
-            'email' => 'registered@example.com',
-            'password' => '11111111',
-            'unit_roles' => [
-                'lobby' => ['registered'],
-            ],
-        ],
     ],
 
     /*
@@ -285,6 +214,15 @@ return [
             'priority' => 2,
             'home_screen' => UsersManager::class,
             'permissions' => ['admin.users_manager.access'],
+        ],
+        'reviewer' => [
+            'default_translations' => [
+                'en' => ['display_name' => 'Reviewer', 'description' => 'User responsible for reviewing and approving content.'],
+                'es' => ['display_name' => 'Revisor', 'description' => 'Usuario responsable de revisar y aprobar contenido.'],
+            ],
+            'priority' => 3,
+            'home_screen' => PostApprovalScreen::class,
+            'permissions' => ['communication.post_approval.access'],
         ],
         'translator' => [
             'default_translations' => [
