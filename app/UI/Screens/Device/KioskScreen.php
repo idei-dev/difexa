@@ -2,11 +2,14 @@
 // @usim: feature="admin", type="screen"
 namespace App\UI\Screens\Device;
 
+use App\Contracts\KioskPostResolverContract;
+use App\Models\Device;
 use Idei\Usim\Components\Carousel;
 use Idei\Usim\Components\Container;
 use Idei\Usim\Screen;
 use Idei\Usim\UI;
 use Idei\Usim\ValueObjects\Spacing;
+use Illuminate\Support\Facades\Auth;
 
 class KioskScreen extends Screen
 {
@@ -26,8 +29,28 @@ class KioskScreen extends Screen
 
     protected int $store_timeout_ms = 5000;
 
+    protected KioskPostResolverContract $kioskPostResolver;
+
+    public function __construct(
+        ?KioskPostResolverContract $kioskPostResolver = null,
+    ) {
+        $this->kioskPostResolver = $kioskPostResolver ?? app(KioskPostResolverContract::class);
+    }
+
     public static function authorize(): bool
     {
+        $device = Auth::guard('device')->user();
+        if ($device instanceof Device) {
+            $units = $device->usimUnits;
+            if ($units->isNotEmpty()) {
+                foreach ($units as $unit) {
+                    if (self::requirePermission('device.kiosk_screen.access', 'device', $unit)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
         return self::requirePermission('device.kiosk_screen.access', 'device');
     }
 
@@ -100,31 +123,12 @@ class KioskScreen extends Screen
      */
     protected function mediaItems(): array
     {
-        return [
-            [
-                'id' => 'd1',
-                'kind' => 'image',
-                'url' => 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
-                'mime' => 'image/jpeg',
-                'title' => t('screen.device.kiosk.media.welcome'),
-                'duration_ms' => 5000,
-            ],
-            [
-                'id' => 'd2',
-                'kind' => 'video',
-                'url' => 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-                'mime' => 'video/mp4',
-                'title' => t('screen.device.kiosk.media.showcase'),
-                'duration_ms' => 5000,
-            ],
-            [
-                'id' => 'd3',
-                'kind' => 'image',
-                'url' => 'https://images.unsplash.com/photo-1491553895911-0055eca6402d?auto=format&fit=crop&w=1200&q=80',
-                'mime' => 'image/jpeg',
-                'title' => t('screen.device.kiosk.media.announcement'),
-                'duration_ms' => 6000,
-            ],
-        ];
+        $device = Auth::guard('device')->user();
+
+        if ($device instanceof Device) {
+            return $this->kioskPostResolver->resolveForDevice($device);
+        }
+
+        return $this->kioskPostResolver->resolvePublic();
     }
 }

@@ -7,33 +7,9 @@ use App\UI\Screens\Menu;
 it('returns home screen with expected core components', function () {
     $ui = uiScenario($this, Home::class, ['reset' => true]);
 
-    $welcome = $ui->component('welcome');
-    $subtitle = $ui->component('subtitle');
-    $features = $ui->component('features');
-    $componentsCard = $ui->component('components_card');
-    $gettingStartedCard = $ui->component('getting_started_card');
-
-    $welcome->expect('type')->toBe('label');
-    expect($welcome->data()['text'] ?? '')->toContain('Welcome to USIM UI Framework');
-
-    $subtitle->expect('type')->toBe('label');
-    $features->expect('type')->toBe('container');
-    $componentsCard->expect('type')->toBe('card');
-    $gettingStartedCard->expect('type')->toBe('card');
-
-    $ui->assertNoIssues();
-});
-
-it('declares expected home card actions', function () {
-    $ui = uiScenario($this, Home::class, ['reset' => true]);
-
-    $componentsCard = $ui->component('components_card')->data();
-    $easyCard = $ui->component('easy_card')->data();
-    $customCard = $ui->component('custom_card')->data();
-
-    expect(cardHasAction($componentsCard, 'view_demos'))->toBeFalse();
-    expect(cardHasAction($easyCard, 'view_code'))->toBeFalse();
-    expect(cardHasAction($customCard, 'customize'))->toBeFalse();
+    $landing = $ui->component('landing_lbl');
+    $landing->expect('type')->toBe('label');
+    expect($landing->data()['html'] ?? '')->toContain('Difexa');
 
     $ui->assertNoIssues();
 });

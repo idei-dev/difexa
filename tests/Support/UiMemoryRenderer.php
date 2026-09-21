@@ -216,6 +216,12 @@ final class UiMemoryRenderer
     /** @param array<string, mixed> $component */
     private function setComponent(string $jsonKey, array $component): void
     {
+        $component['_json_key'] = $jsonKey;
+
+        if (is_numeric($jsonKey) && !isset($component['_id'])) {
+            $component['_id'] = (int) $jsonKey;
+        }
+
         $this->componentsByKey[$jsonKey] = $component;
         $this->syncInternalId($jsonKey, $component);
     }

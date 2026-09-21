@@ -463,13 +463,14 @@ class UserService
         $this->applySearchFilter($query, $search);
 
         // Ordenamiento
+        $direction = strtolower($sortDirection) === 'desc' ? 'desc' : 'asc';
         if ($sortBy === 'roles') {
             $query->leftJoin('model_has_roles', 'users.id', '=', 'model_has_roles.model_id')
                 ->leftJoin('roles', 'model_has_roles.role_id', '=', 'roles.id')
                 ->select('users.*', 'roles.name as role_name')
-                ->orderBy('roles.name', $sortDirection);
+                ->orderBy('roles.name', $direction);
         } else {
-            $query->orderBy($sortBy, $sortDirection);
+            $query->orderBy($sortBy, $direction);
         }
 
         $users = $query->paginate($perPage, ['*'], 'page', $page);

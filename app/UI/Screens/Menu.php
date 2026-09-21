@@ -12,6 +12,8 @@ use App\UI\Screens\Admin\TranslateManager;
 use App\UI\Screens\Admin\UsersManager;
 use App\UI\Screens\Auth\Login;
 use App\UI\Screens\Auth\Profile;
+use App\UI\Screens\Communication\PostApprovalScreen;
+use App\UI\Screens\Member\PostManager;
 use Idei\Usim\Components\Button;
 use Idei\Usim\Components\Container;
 use Idei\Usim\Components\MenuDropdown;
@@ -416,6 +418,8 @@ class Menu extends Screen
     private function populateMainMenu(MenuDropdown $menu): void
     {
         $menu->link(t('screen.menu.items.home'), '/', '🏠');
+        $menu->screen(PostManager::class);
+        $menu->screen(PostApprovalScreen::class);
         $menu->screen(UsersManager::class);
         $menu->screen(TranslateManager::class);
         $menu->separator();

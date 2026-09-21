@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Idei\Usim\Models\UsimUnit;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Spatie\Permission\Traits\HasRoles;
 use Laravel\Sanctum\HasApiTokens; // Lo dejamos preparado para el Token definitivo
@@ -23,7 +24,8 @@ use Laravel\Sanctum\HasApiTokens; // Lo dejamos preparado para el Token definiti
  */
 class Device extends Authenticatable
 {
-    use HasRoles, HasApiTokens;
+    /** @use HasFactory<\Database\Factories\DeviceFactory> */
+    use HasFactory, HasRoles, HasApiTokens;
 
     /**
      * Guard de autenticación de Spatie y Laravel para dispositivos.

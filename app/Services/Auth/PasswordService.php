@@ -32,10 +32,13 @@ class PasswordService
         ]);
 
         if ($validator->fails()) {
+            /** @var array<string, list<string>> $errors */
+            $errors = array_map(static fn($messages): array => array_values((array) $messages), $validator->errors()->toArray());
+
             return [
                 'status' => 'error',
                 'message' => t('service.auth.password.validation_errors'),
-                'errors' => $validator->errors()->toArray(),
+                'errors' => $errors,
             ];
         }
 
@@ -102,10 +105,13 @@ class PasswordService
         ]);
 
         if ($validator->fails()) {
+            /** @var array<string, list<string>> $errors */
+            $errors = array_map(static fn($messages): array => array_values((array) $messages), $validator->errors()->toArray());
+
             return [
                 'status' => 'error',
                 'message' => t('service.auth.password.validation_errors'),
-                'errors' => $validator->errors()->toArray(),
+                'errors' => $errors,
             ];
         }
 

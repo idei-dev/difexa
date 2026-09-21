@@ -79,4 +79,20 @@ return [
             ],
         ],
     ],
+    'communication' => [
+        'post_approval' => [
+            'access' => [
+                'name' => 'Acceder a Communication Post Approval',
+                'description' => 'Permite acceder a la pantalla Communication Post Approval.',
+            ],
+        ],
+    ],
+    'member' => [
+        'post_manager' => [
+            'access' => [
+                'name' => 'Acceder a Member Post Manager',
+                'description' => 'Permite acceder a la pantalla Member Post Manager.',
+            ],
+        ],
+    ],
 ];

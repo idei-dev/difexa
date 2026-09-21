@@ -79,4 +79,20 @@ return [
             ],
         ],
     ],
+    'communication' => [
+        'post_approval' => [
+            'access' => [
+                'name' => 'Access Communication Post Approval',
+                'description' => 'Permission to access Communication Post Approval.',
+            ],
+        ],
+    ],
+    'member' => [
+        'post_manager' => [
+            'access' => [
+                'name' => 'Access Member Post Manager',
+                'description' => 'Permission to access Member Post Manager.',
+            ],
+        ],
+    ],
 ];
