@@ -5,8 +5,10 @@ namespace App\Services\Post;
 use App\Contracts\PostServiceContract;
 use App\Enums\PostStatus;
 use App\Enums\PostType;
+use App\Models\Device;
 use App\Models\Post;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -23,6 +25,7 @@ class PostService implements PostServiceContract
 
         $submitNow = (bool) ($data['submit_now'] ?? false);
         $status = $submitNow ? PostStatus::PENDING : PostStatus::DRAFT;
+        $isPublic = $this->resolveIsPublic($validated, false);
 
         /** @var Post $post */
         $post = Post::create([
@@ -37,7 +40,7 @@ class PostService implements PostServiceContract
             'starts_at' => Carbon::parse((string) ($validated['starts_at'] ?? now())),
             'ends_at' => Carbon::parse((string) ($validated['ends_at'] ?? now())),
             'display_duration_sec' => isset($validated['display_duration_sec']) ? (int) $validated['display_duration_sec'] : 10,
-            'is_public' => isset($validated['is_public']) ? (bool) $validated['is_public'] : false,
+            'is_public' => $isPublic,
         ]);
 
         if (array_key_exists('device_ids', $validated)) {
@@ -70,6 +73,8 @@ class PostService implements PostServiceContract
             $newStatus = PostStatus::DRAFT;
         }
 
+        $isPublic = $this->resolveIsPublic($validated, $post->is_public);
+
         $post->update([
             'title' => isset($validated['title']) ? (string) $validated['title'] : $post->title,
             'content' => array_key_exists('content', $validated) ? ($validated['content'] !== null ? (string) $validated['content'] : null) : $post->content,
@@ -80,7 +85,7 @@ class PostService implements PostServiceContract
             'starts_at' => isset($validated['starts_at']) ? Carbon::parse((string) $validated['starts_at']) : $post->starts_at,
             'ends_at' => isset($validated['ends_at']) ? Carbon::parse((string) $validated['ends_at']) : $post->ends_at,
             'display_duration_sec' => isset($validated['display_duration_sec']) ? (int) $validated['display_duration_sec'] : $post->display_duration_sec,
-            'is_public' => isset($validated['is_public']) ? (bool) $validated['is_public'] : $post->is_public,
+            'is_public' => $isPublic,
             'rejection_reason' => $submitNow ? null : $post->rejection_reason,
         ]);
 
@@ -226,5 +231,60 @@ class PostService implements PostServiceContract
         $validated = $validator->validated();
 
         return $validated;
+    }
+
+    /**
+     * Determine whether the post should have public diffusion based on selected institutional/public devices or explicit flag.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function resolveIsPublic(array $validated, bool $fallback = false): bool
+    {
+        $hasDevicesKey = array_key_exists('device_ids', $validated);
+        $rawDeviceIds = $validated['device_ids'] ?? null;
+
+        /** @var list<int> $deviceIds */
+        $deviceIds = [];
+        if (is_array($rawDeviceIds)) {
+            foreach ($rawDeviceIds as $id) {
+                if (is_int($id) || (is_string($id) && is_numeric($id))) {
+                    $deviceIds[] = (int) $id;
+                }
+            }
+        }
+
+        if ($this->hasPublicDevice($deviceIds)) {
+            return true;
+        }
+
+        if (array_key_exists('is_public', $validated) && $validated['is_public'] !== null) {
+            return (bool) $validated['is_public'];
+        }
+
+        if ($hasDevicesKey) {
+            return false;
+        }
+
+        return $fallback;
+    }
+
+    /**
+     * Check if any of the given device IDs belongs to an institutional / public device.
+     *
+     * @param  list<int>  $deviceIds
+     */
+    private function hasPublicDevice(array $deviceIds): bool
+    {
+        if ($deviceIds === []) {
+            return false;
+        }
+
+        /** @var Collection<int, Device> $devices */
+        $devices = Device::query()
+            ->with('usimUnits')
+            ->whereIn('id', $deviceIds)
+            ->get();
+
+        return $devices->contains(static fn (Device $device): bool => $device->isPublic());
     }
 }

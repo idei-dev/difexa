@@ -218,10 +218,13 @@ class PostManager extends Screen
                 'starts_at' => $this->stringParamOrDefault($params, 'post_starts_at', now()->toDateTimeString()),
                 'ends_at' => $this->stringParamOrDefault($params, 'post_ends_at', now()->addDays(7)->toDateTimeString()),
                 'display_duration_sec' => $this->intParamOrDefault($params, 'post_display_duration_sec', 10),
-                'is_public' => $this->boolParamOrDefault($params, 'post_is_public', false),
                 'submit_now' => $submitNow,
                 'device_ids' => $deviceIds,
             ];
+
+            if (array_key_exists('post_is_public', $params)) {
+                $data['is_public'] = $this->boolParamOrDefault($params, 'post_is_public', false);
+            }
 
             if ($existingPost !== null) {
                 $this->postService->update($existingPost, $data, $user);

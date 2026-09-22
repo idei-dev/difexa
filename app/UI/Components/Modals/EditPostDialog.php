@@ -25,6 +25,8 @@ class EditPostDialog
 
     public const TAB_CONTENT = 'tab_content';
 
+    public const TAB_SCHEDULE = 'tab_schedule';
+
     public const TAB_MEDIA = 'tab_media';
 
     public const TAB_DEVICES = 'tab_devices';
@@ -89,6 +91,7 @@ class EditPostDialog
 
         $tabsContainer = $this->createTabsContainer($post);
         $tabsContainer->add($this->buildContentSection($post), tab: self::TAB_CONTENT);
+        $tabsContainer->add($this->buildScheduleSection($post), tab: self::TAB_SCHEDULE);
         $tabsContainer->add($this->buildMediaSection($post), tab: self::TAB_MEDIA);
         $tabsContainer->add($this->buildDevicesSection($post, $unitId), tab: self::TAB_DEVICES);
 
@@ -134,8 +137,9 @@ class EditPostDialog
         return UI::container('post_edit_tabs')
             ->tabs(
                 [
-                    self::TAB_CONTENT => ['label' => '📝 Contenido y Programación'],
-                    self::TAB_MEDIA => ['label' => '📎 Multimedia (Imagen / Video)'],
+                    self::TAB_CONTENT => ['label' => '📝 Contenido'],
+                    self::TAB_SCHEDULE => ['label' => '📅 Programación'],
+                    self::TAB_MEDIA => ['label' => '📎 Multimedia'],
                     self::TAB_DEVICES => ['label' => '📺 Dispositivos Smart TV'],
                 ],
                 $activeTab
@@ -146,7 +150,7 @@ class EditPostDialog
     }
 
     /**
-     * Build Tab 1: Content and Scheduling fields.
+     * Build Tab 1: Content fields.
      */
     private function buildContentSection(?Post $post): Container
     {
@@ -178,10 +182,35 @@ class EditPostDialog
                 ->height(Size::px(self::TEXTAREA_HEIGHT_PX))
         );
 
-        $contentSection->add($this->buildDatesRow($post));
-        $contentSection->add($this->buildSettingsRow($post));
-
         return $contentSection;
+    }
+
+    /**
+     * Build Tab 2: Scheduling and display duration fields.
+     */
+    private function buildScheduleSection(?Post $post): Container
+    {
+        $scheduleSection = UI::container('section_schedule')
+            ->layout(LayoutType::VERTICAL)
+            ->gap(Spacing::px(self::SECTION_GAP_PX))
+            ->plain();
+
+        $scheduleSection->add(
+            UI::label('lbl_schedule_instructions')
+                ->text('📅 Define el período de vigencia en el que se difundirá la publicación y el tiempo de exposición en cada rotación del Kiosk:')
+                ->fontSize('13px')
+        );
+
+        $scheduleSection->add($this->buildDatesRow($post));
+
+        $scheduleSection->add(
+            UI::input('post_display_duration_sec')
+                ->label('Duración en Kiosk (segundos)')
+                ->type('number')
+                ->value($post !== null ? (string) $post->display_duration_sec : self::DEFAULT_DURATION_SEC)
+        );
+
+        return $scheduleSection;
     }
 
     /**
@@ -219,33 +248,6 @@ class EditPostDialog
         );
 
         return $datesContainer;
-    }
-
-    /**
-     * Build the display duration and public diffusion settings row.
-     */
-    private function buildSettingsRow(?Post $post): Container
-    {
-        $settingsContainer = UI::container('settings_container')
-            ->layout(LayoutType::HORIZONTAL)
-            ->justifyContent(JustifyContent::SPACE_BETWEEN)
-            ->gap(Spacing::px(self::SECTION_GAP_PX))
-            ->plain();
-
-        $settingsContainer->add(
-            UI::input('post_display_duration_sec')
-                ->label('Duración en Kiosk (segundos)')
-                ->type('number')
-                ->value($post !== null ? (string) $post->display_duration_sec : self::DEFAULT_DURATION_SEC)
-        );
-
-        $settingsContainer->add(
-            UI::checkbox('post_is_public')
-                ->label('Difusión Pública (Visible en Kiosks Generales / Entrada)')
-                ->checked($post !== null ? $post->is_public : false)
-        );
-
-        return $settingsContainer;
     }
 
     /**
@@ -311,7 +313,7 @@ class EditPostDialog
 
         $devicesSection->add(
             UI::label('lbl_devices_instructions')
-                ->text('📺 Selecciona los dispositivos Smart TV (de tu unidad o institucionales) donde deseas proyectar esta publicación:')
+                ->text('📺 Selecciona los dispositivos Smart TV donde deseas proyectar esta publicación. Al seleccionar un dispositivo Institucional / Público, se habilitará automáticamente la difusión pública:')
                 ->fontSize('13px')
         );
 
@@ -488,4 +490,3 @@ class EditPostDialog
         );
     }
 }
-
