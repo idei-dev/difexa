@@ -9,7 +9,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+/** @var \Tests\TestCase $this */
 beforeEach(function () {
+    /** @var \Tests\TestCase $this */
     $this->authorA = User::factory()->create(['name' => 'Dr. Marie Curie']);
     $this->authorB = User::factory()->create(['name' => 'Dr. Albert Einstein']);
 

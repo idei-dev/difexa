@@ -14,16 +14,17 @@ use Spatie\Permission\Models\Role;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->permission = Permission::firstOrCreate([
+    /** @var \Tests\TestCase $this */
+    $permission = Permission::firstOrCreate([
         'name' => 'device.kiosk_screen.access',
         'guard_name' => 'device',
     ]);
 
-    $this->role = Role::firstOrCreate([
+    $role = Role::firstOrCreate([
         'name' => 'smart_tv',
         'guard_name' => 'device',
     ]);
-    $this->role->givePermissionTo($this->permission);
+    $role->givePermissionTo($permission);
 
     $this->unitIdei = UsimUnit::firstOrCreate(
         ['slug' => 'idei'],

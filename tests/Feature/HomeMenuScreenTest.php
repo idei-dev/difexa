@@ -5,6 +5,7 @@ use App\UI\Screens\Home;
 use App\UI\Screens\Menu;
 
 it('returns home screen with expected core components', function () {
+    /** @var \Tests\TestCase $this */
     $ui = uiScenario($this, Home::class, ['reset' => true]);
 
     $landing = $ui->component('landing_lbl');
@@ -15,6 +16,7 @@ it('returns home screen with expected core components', function () {
 });
 
 it('returns menu screen for guests with settings trigger and register option', function () {
+    /** @var \Tests\TestCase $this */
     $ui = uiScenario($this, Menu::class, ['parent' => 'menu']);
 
     $mainMenu = $ui->component('main_menu')->data();

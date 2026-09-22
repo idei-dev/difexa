@@ -13,6 +13,7 @@ use Tests\TestCase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    /** @var TestCase $this */
     $this->user = User::factory()->create();
     $this->actingAs($this->user);
 

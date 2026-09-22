@@ -1,8 +1,6 @@
 <?php
 
-use App\Enums\PostStatus;
 use App\Enums\PostType;
-use App\Models\Device;
 use App\Models\Post;
 use App\Models\User;
 use App\Services\Device\DeviceService;
@@ -19,6 +17,7 @@ use Tests\TestCase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    /** @var TestCase $this */
     $this->mainUnit = UsimUnit::firstOrCreate(
         ['slug' => 'main'],
         ['name' => 'Sede Central', 'type' => 'academic']

@@ -12,6 +12,7 @@ use Tests\TestCase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    /** @var TestCase $this */
     $this->commUnit = UsimUnit::firstOrCreate(
         ['slug' => 'comunicacion'],
         ['name' => 'Secretaría de Comunicación', 'type' => 'academic']
