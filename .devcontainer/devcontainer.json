@@ -2,7 +2,6 @@
     "name": "USIM Framework Dev Container",
     "dockerFile": "Dockerfile",
     "shutdownAction": "none",
-    "runArgs": ["--name", "${containerWorkspaceFolder}-devcontainer"],
     "forwardPorts": [
         8000,
         8025
