@@ -7,6 +7,8 @@ use App\Models\User;
 use App\UI\Screens\Member\PostManager;
 use Idei\Usim\Models\UsimUnit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
+use Tests\TestCase;
 
 uses(RefreshDatabase::class);
 
@@ -18,10 +20,19 @@ beforeEach(function () {
         ['slug' => 'exactas-informatica'],
         ['name' => 'Departamento de Computación', 'type' => 'academic']
     );
+
+    $this->user->usimUnits()->attach($this->unit->id);
+
+    setPermissionsTeamId($this->unit->id);
+    $permission = Permission::firstOrCreate([
+        'name' => 'member.post_manager.access',
+        'guard_name' => 'web',
+    ]);
+    $this->user->givePermissionTo($permission);
 });
 
 it('loads post manager screen with expected components', function () {
-    /** @var \Tests\TestCase $this */
+    /** @var TestCase $this */
     $ui = uiScenario($this, PostManager::class, ['reset' => true]);
 
     $title = $ui->component('page_title');
@@ -38,7 +49,7 @@ it('loads post manager screen with expected components', function () {
 });
 
 it('opens create post modal when clicking new post button', function () {
-    /** @var \Tests\TestCase $this */
+    /** @var TestCase $this */
     $ui = uiScenario($this, PostManager::class, ['reset' => true]);
 
     $response = $ui->click('btn_create_post');
@@ -47,10 +58,14 @@ it('opens create post modal when clicking new post button', function () {
     $dialog = findComponentByName($response->json(), 'edit_post_dialog');
     expect($dialog)->not->toBeNull()
         ->and($dialog['parent'])->toBe('modal');
+
+    $uploader = findComponentByName($response->json(), 'post_uploader');
+    expect($uploader)->not->toBeNull()
+        ->and($uploader['aspect_ratio'])->toBe('16:9');
 });
 
 it('creates a new draft post via save_post event', function () {
-    /** @var \Tests\TestCase $this */
+    /** @var TestCase $this */
     $uiResponse = getScreenJson($this, PostManager::class);
     $uiResponse->assertOk();
     $componentId = serviceRootComponentId($uiResponse->json());
@@ -81,7 +96,7 @@ it('creates a new draft post via save_post event', function () {
 });
 
 it('submits a post for approval via submit_for_approval event', function () {
-    /** @var \Tests\TestCase $this */
+    /** @var TestCase $this */
     $post = Post::factory()->draft()->create([
         'user_id' => $this->user->id,
         'unit_id' => $this->unit->id,
@@ -109,7 +124,7 @@ it('submits a post for approval via submit_for_approval event', function () {
 });
 
 it('deletes a post via delete_post event', function () {
-    /** @var \Tests\TestCase $this */
+    /** @var TestCase $this */
     $post = Post::factory()->draft()->create([
         'user_id' => $this->user->id,
         'unit_id' => $this->unit->id,
@@ -134,4 +149,3 @@ it('deletes a post via delete_post event', function () {
 
     expect(Post::find($post->id))->toBeNull();
 });
-

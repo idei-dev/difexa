@@ -3,6 +3,7 @@
 namespace App\UI\Screens\Member;
 
 use App\Contracts\PostServiceContract;
+use App\Enums\PostType;
 use App\Models\Post;
 use App\Models\User;
 use App\UI\Components\Modals\EditPostDialog;
@@ -27,12 +28,14 @@ use Throwable;
 
 class PostManager extends Screen
 {
-    use HandlesScreenParameters;
     use HandlesPostMediaUpload;
+    use HandlesScreenParameters;
     use ResolvesActiveUnitContext;
 
     protected Table $posts_table;
+
     protected Input $search_posts;
+
     protected Button $btn_create_post;
 
     protected PostServiceContract $postService;
@@ -122,7 +125,7 @@ class PostManager extends Screen
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onPostsTableRowClicked(array $params): void
     {
@@ -132,16 +135,18 @@ class PostManager extends Screen
         }
 
         $post = Post::find($postId);
-        if (!$post) {
+        if (! $post) {
             $this->toast(t('toast.error'), 'danger');
+
             return;
         }
 
-        EditPostDialog::open(submitAction: 'save_post', post: $post);
+        $unit = $this->resolveActiveUnit();
+        EditPostDialog::open(submitAction: 'save_post', post: $post, unitId: $unit?->id);
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onPostsTableColumnClicked(array $params): void
     {
@@ -155,22 +160,24 @@ class PostManager extends Screen
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onOpenCreatePostModal(array $params): void
     {
-        EditPostDialog::open(submitAction: 'save_post');
+        $unit = $this->resolveActiveUnit();
+        EditPostDialog::open(submitAction: 'save_post', unitId: $unit?->id);
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onSavePost(array $params): void
     {
         /** @var User|null $user */
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             $this->toast('Debes iniciar sesión.', 'danger');
+
             return;
         }
 
@@ -186,6 +193,22 @@ class PostManager extends Screen
 
             $media = $this->resolvePostMedia($params, $postType, $existingPost);
 
+            // Requisito: Si el usuario subió una imagen, el tipo de post debe cambiar a "imagen"
+            if ($media['media_mime'] !== null && str_starts_with($media['media_mime'], 'image/')) {
+                $postType = PostType::IMAGE->value;
+            }
+
+            $rawDevices = $params['post_devices'] ?? $params['devices'] ?? $params['device_ids'] ?? [];
+            $deviceIds = [];
+            if (is_array($rawDevices)) {
+                $deviceIds = array_values(array_filter(
+                    array_map(static fn (mixed $d): ?int => is_numeric($d) ? (int) $d : null, $rawDevices),
+                    static fn (?int $id): bool => $id !== null && $id > 0
+                ));
+            } elseif (is_numeric($rawDevices) && (int) $rawDevices > 0) {
+                $deviceIds = [(int) $rawDevices];
+            }
+
             $data = [
                 'title' => $this->stringParamOrDefault($params, 'post_title', ''),
                 'content' => $this->optionalStringParam($params, 'post_content'),
@@ -197,6 +220,7 @@ class PostManager extends Screen
                 'display_duration_sec' => $this->intParamOrDefault($params, 'post_display_duration_sec', 10),
                 'is_public' => $this->boolParamOrDefault($params, 'post_is_public', false),
                 'submit_now' => $submitNow,
+                'device_ids' => $deviceIds,
             ];
 
             if ($existingPost !== null) {
@@ -218,14 +242,14 @@ class PostManager extends Screen
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onSubmitForApproval(array $params): void
     {
         /** @var User|null $user */
         $user = Auth::user();
         $postId = $this->optionalIntParam($params, 'model_id') ?? $this->optionalIntParam($params, 'post_id');
-        if (!$user || $postId === null) {
+        if (! $user || $postId === null) {
             return;
         }
 
@@ -240,14 +264,14 @@ class PostManager extends Screen
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onDeletePost(array $params): void
     {
         /** @var User|null $user */
         $user = Auth::user();
         $postId = $this->optionalIntParam($params, 'model_id') ?? $this->optionalIntParam($params, 'post_id');
-        if (!$user || $postId === null) {
+        if (! $user || $postId === null) {
             return;
         }
 
@@ -262,7 +286,7 @@ class PostManager extends Screen
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onCloseModal(array $params): void
     {
@@ -270,7 +294,7 @@ class PostManager extends Screen
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onSearchPosts(array $params): void
     {
@@ -280,7 +304,7 @@ class PostManager extends Screen
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onChangePage(array $params): void
     {

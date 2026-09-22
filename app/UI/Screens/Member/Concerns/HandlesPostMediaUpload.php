@@ -17,18 +17,22 @@ trait HandlesPostMediaUpload
     /**
      * Process post media upload and return resolved media URL and MIME type.
      *
-     * @param array<string, mixed> $params
-     * @param string $postType
-     * @param Post|null $existingPost
+     * @param  array<string, mixed>  $params
      * @return array{media_url: string|null, media_mime: string|null}
+     *
      * @throws InvalidArgumentException
      */
     protected function resolvePostMedia(array $params, string $postType, ?Post $existingPost = null): array
     {
         $uploader = UI::uploader('post_uploader')
             ->media()
+            ->aspect('16:9')
             ->multiple(false)
             ->maxFiles(1);
+
+        if (! isset($params['post_uploader_temp_ids']) && isset($params['post_uploader']) && is_string($params['post_uploader']) && $params['post_uploader'] !== '') {
+            $params['post_uploader_temp_ids'] = json_encode([$params['post_uploader']]);
+        }
 
         $tempId = $uploader->getTempId($params);
         $mediaMime = null;
@@ -103,4 +107,3 @@ trait HandlesPostMediaUpload
         };
     }
 }
-

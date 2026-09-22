@@ -32,11 +32,16 @@ class PostApprovalScreen extends Screen
     use ManagesPostReviewSection;
 
     protected Table $posts_table;
+
     protected Input $search_posts;
+
     protected Select $filter_status;
+
     protected Split $moderation_split;
 
     protected ?int $store_selected_post_id = null;
+
+    protected ?string $store_filter_status = 'pending';
 
     protected PostServiceContract $postService;
 
@@ -108,16 +113,17 @@ class PostApprovalScreen extends Screen
         /** @var list<array{value: string, label: string}> $statusOptions */
         $statusOptions = [
             ['value' => '', 'label' => 'Todos los estados'],
-            ['value' => PostStatus::PENDING->value, 'label' => '🟡 Pendientes de Aprobación'],
+            ['value' => PostStatus::PENDING->value, 'label' => '🟡 Pendientes'],
             ['value' => PostStatus::APPROVED->value, 'label' => '🟢 Aprobados'],
             ['value' => PostStatus::REJECTED->value, 'label' => '🔴 Rechazados'],
         ];
 
+        $effectiveFilter = $this->store_filter_status ?? PostStatus::PENDING->value;
         $this->filter_status = UI::select('filter_status')
-            ->label('Estado')
             ->options($statusOptions)
-            ->value(PostStatus::PENDING->value)
-            ->width(Size::px(220));
+            ->value($effectiveFilter)
+            ->onChange('filter_by_status')
+            ->width(Size::px(180));
 
         $toolbar->add($this->search_posts);
         $toolbar->add($this->filter_status);
@@ -133,6 +139,8 @@ class PostApprovalScreen extends Screen
                 hasToolbar: true,
                 paginated: true
             );
+
+        $this->syncTableFilters();
 
         if ($this->store_selected_post_id !== null) {
             $this->posts_table->select($this->store_selected_post_id);
@@ -169,7 +177,7 @@ class PostApprovalScreen extends Screen
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onPostsTableRowClicked(array $params): void
     {
@@ -178,18 +186,52 @@ class PostApprovalScreen extends Screen
             return;
         }
 
-        $post = Post::find($postId);
-        if (!$post) {
+        $post = Post::with(['author', 'unit'])->find($postId);
+        if (! $post) {
             $this->toast(t('toast.error'), 'danger');
+
             return;
         }
 
         $this->store_selected_post_id = $post->id;
         $this->posts_table->select($post->id);
+
+        $secondPane = $this->moderation_split->secondPane();
+        $secondPane->clear();
+        $secondPane->add($this->buildReviewPanel($post));
+    }
+
+    protected function syncTableFilters(): void
+    {
+        $model = $this->posts_table->getModel();
+        if ($model instanceof PostApprovalTableModel) {
+            $status = $this->store_filter_status ?? PostStatus::PENDING->value;
+            $model->setStatusFilter($status !== '' ? $status : null);
+        }
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
+     */
+    public function onFilterByStatus(array $params): void
+    {
+        $status = $this->optionalStringParam($params, 'value') ?? $this->optionalStringParam($params, 'filter_status') ?? '';
+        $this->store_filter_status = $status;
+        $this->filter_status->value($status);
+
+        $this->store_selected_post_id = null;
+        $this->posts_table->select(null);
+
+        $secondPane = $this->moderation_split->secondPane();
+        $secondPane->clear();
+        $secondPane->add($this->buildReviewPanel(null));
+
+        $this->syncTableFilters();
+        $this->posts_table->page(1);
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
      */
     public function onPostsTableColumnClicked(array $params): void
     {
@@ -198,12 +240,13 @@ class PostApprovalScreen extends Screen
             return;
         }
 
+        $this->syncTableFilters();
         $this->posts_table->sortedBy($column);
         $this->posts_table->page(1);
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onOpenViewPostModal(array $params): void
     {
@@ -213,8 +256,9 @@ class PostApprovalScreen extends Screen
         }
 
         $post = Post::find($postId);
-        if (!$post) {
+        if (! $post) {
             $this->toast(t('toast.error'), 'danger');
+
             return;
         }
 
@@ -222,14 +266,14 @@ class PostApprovalScreen extends Screen
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onSubmitApprovePost(array $params): void
     {
         /** @var User|null $approver */
         $approver = Auth::user();
         $postId = $this->optionalIntParam($params, 'model_id') ?? $this->optionalIntParam($params, 'post_id');
-        if (!$approver || $postId === null) {
+        if (! $approver || $postId === null) {
             return;
         }
 
@@ -239,14 +283,19 @@ class PostApprovalScreen extends Screen
             $this->closeModal();
             $this->toast('Publicación aprobada exitosamente para difusión.', 'success');
             $this->store_selected_post_id = $post->id;
+            $this->syncTableFilters();
             $this->posts_table->refresh();
+
+            $secondPane = $this->moderation_split->secondPane();
+            $secondPane->clear();
+            $secondPane->add($this->buildReviewPanel($post));
         } catch (Throwable $e) {
             $this->toast($e->getMessage(), 'danger');
         }
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onOpenRejectModal(array $params): void
     {
@@ -256,8 +305,9 @@ class PostApprovalScreen extends Screen
         }
 
         $post = Post::find($postId);
-        if (!$post) {
+        if (! $post) {
             $this->toast(t('toast.error'), 'danger');
+
             return;
         }
 
@@ -265,7 +315,7 @@ class PostApprovalScreen extends Screen
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onSubmitRejectPost(array $params): void
     {
@@ -273,7 +323,7 @@ class PostApprovalScreen extends Screen
         $approver = Auth::user();
         $postId = $this->optionalIntParam($params, 'post_id');
         $reason = $this->stringParamOrDefault($params, 'rejection_reason', '');
-        if (!$approver || $postId === null) {
+        if (! $approver || $postId === null) {
             return;
         }
 
@@ -283,14 +333,19 @@ class PostApprovalScreen extends Screen
             $this->closeModal();
             $this->toast('Publicación rechazada y devuelta al autor.', 'warning');
             $this->store_selected_post_id = $post->id;
+            $this->syncTableFilters();
             $this->posts_table->refresh();
+
+            $secondPane = $this->moderation_split->secondPane();
+            $secondPane->clear();
+            $secondPane->add($this->buildReviewPanel($post));
         } catch (Throwable $e) {
             $this->toast($e->getMessage(), 'danger');
         }
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onCloseModal(array $params): void
     {
@@ -298,21 +353,23 @@ class PostApprovalScreen extends Screen
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onSearchPosts(array $params): void
     {
         $search = trim($this->searchParam($params, ['value', 'search_posts']));
+        $this->syncTableFilters();
         $this->posts_table->setSearchTerm($search);
         $this->search_posts->value($search);
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     public function onChangePage(array $params): void
     {
         $page = $this->intParamOrDefault($params, 'page', 1);
+        $this->syncTableFilters();
         $this->posts_table->page($page);
     }
 }

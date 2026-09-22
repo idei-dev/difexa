@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Collection;
 class KioskPostResolver implements KioskPostResolverContract
 {
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function resolveForDevice(Device $device): array
     {
@@ -19,18 +19,24 @@ class KioskPostResolver implements KioskPostResolverContract
         $query = Post::query()->active();
 
         if ($device->isPublic() || empty($unitIds)) {
-            // Public device displays public posts or main unit posts
-            $query->where(function ($q): void {
+            // Public device displays public posts, main unit posts, or posts specifically targeting this device
+            $query->where(function ($q) use ($device): void {
                 $q->where('is_public', true)
                     ->orWhereHas('unit', function ($uq): void {
                         $uq->where('slug', 'main');
+                    })
+                    ->orWhereHas('devices', function ($dq) use ($device): void {
+                        $dq->where('devices.id', $device->id);
                     });
             });
         } else {
-            // Unit-assigned device displays posts for its unit(s) plus any global/public posts
-            $query->where(function ($q) use ($unitIds): void {
+            // Unit-assigned device displays posts for its unit(s), global/public posts, or posts specifically targeting this device
+            $query->where(function ($q) use ($unitIds, $device): void {
                 $q->whereIn('unit_id', $unitIds)
-                    ->orWhere('is_public', true);
+                    ->orWhere('is_public', true)
+                    ->orWhereHas('devices', function ($dq) use ($device): void {
+                        $dq->where('devices.id', $device->id);
+                    });
             });
         }
 
@@ -42,13 +48,13 @@ class KioskPostResolver implements KioskPostResolverContract
         }
 
         /** @var list<array{id: string, kind: string, url: string, mime: string, title: string, duration_ms: int}> $media */
-        $media = $posts->map(fn(Post $post): array => $post->toMediaItem())->values()->all();
+        $media = $posts->map(fn (Post $post): array => $post->toMediaItem())->values()->all();
 
         return $media;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function resolveForUnit(int $unitId): array
     {
@@ -67,13 +73,13 @@ class KioskPostResolver implements KioskPostResolverContract
         }
 
         /** @var list<array{id: string, kind: string, url: string, mime: string, title: string, duration_ms: int}> $media */
-        $media = $posts->map(fn(Post $post): array => $post->toMediaItem())->values()->all();
+        $media = $posts->map(fn (Post $post): array => $post->toMediaItem())->values()->all();
 
         return $media;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function resolvePublic(): array
     {
@@ -89,7 +95,7 @@ class KioskPostResolver implements KioskPostResolverContract
         }
 
         /** @var list<array{id: string, kind: string, url: string, mime: string, title: string, duration_ms: int}> $media */
-        $media = $posts->map(fn(Post $post): array => $post->toMediaItem())->values()->all();
+        $media = $posts->map(fn (Post $post): array => $post->toMediaItem())->values()->all();
 
         return $media;
     }

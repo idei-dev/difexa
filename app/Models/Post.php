@@ -4,11 +4,14 @@ namespace App\Models;
 
 use App\Enums\PostStatus;
 use App\Enums\PostType;
+use Database\Factories\PostFactory;
 use Idei\Usim\Models\UsimUnit;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -20,15 +23,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $media_url
  * @property string|null $media_mime
  * @property PostStatus $status
- * @property \Illuminate\Support\Carbon $starts_at
- * @property \Illuminate\Support\Carbon $ends_at
+ * @property Carbon $starts_at
+ * @property Carbon $ends_at
  * @property int $display_duration_sec
  * @property bool $is_public
  * @property int|null $approved_by
- * @property \Illuminate\Support\Carbon|null $approved_at
+ * @property Carbon|null $approved_at
  * @property string|null $rejection_reason
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property-read User $author
  * @property-read UsimUnit $unit
  * @property-read User|null $approver
@@ -40,7 +43,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Post extends Model
 {
-    /** @use HasFactory<\Database\Factories\PostFactory> */
+    /** @use HasFactory<PostFactory> */
     use HasFactory;
 
     protected $table = 'posts';
@@ -110,9 +113,19 @@ class Post extends Model
     }
 
     /**
+     * Target devices specifically selected for this post.
+     *
+     * @return BelongsToMany<Device, $this>
+     */
+    public function devices(): BelongsToMany
+    {
+        return $this->belongsToMany(Device::class, 'device_post')->withTimestamps();
+    }
+
+    /**
      * Scope query to only include active approved posts within their schedule window.
      *
-     * @param Builder<Post> $query
+     * @param  Builder<Post>  $query
      * @return Builder<Post>
      */
     public function scopeActive(Builder $query): Builder
@@ -127,8 +140,7 @@ class Post extends Model
     /**
      * Scope query to posts belonging to a specific academic unit.
      *
-     * @param Builder<Post> $query
-     * @param int $unitId
+     * @param  Builder<Post>  $query
      * @return Builder<Post>
      */
     public function scopeForUnit(Builder $query, int $unitId): Builder
@@ -139,7 +151,7 @@ class Post extends Model
     /**
      * Scope query to posts marked as public / broadcastable to all kiosks.
      *
-     * @param Builder<Post> $query
+     * @param  Builder<Post>  $query
      * @return Builder<Post>
      */
     public function scopePublicOnly(Builder $query): Builder
@@ -150,7 +162,7 @@ class Post extends Model
     /**
      * Scope query to pending posts awaiting moderation.
      *
-     * @param Builder<Post> $query
+     * @param  Builder<Post>  $query
      * @return Builder<Post>
      */
     public function scopePending(Builder $query): Builder
@@ -185,7 +197,7 @@ class Post extends Model
         };
 
         return [
-            'id' => 'post_' . $this->id,
+            'id' => 'post_'.$this->id,
             'kind' => $kind,
             'url' => (string) ($this->media_url ?? ''),
             'mime' => (string) ($this->media_mime ?? ($this->type === PostType::VIDEO ? 'video/mp4' : 'image/jpeg')),
@@ -194,4 +206,3 @@ class Post extends Model
         ];
     }
 }
-

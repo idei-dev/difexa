@@ -4,13 +4,17 @@ namespace App\UI\Components\Modals;
 
 use App\Enums\PostType;
 use App\Models\Post;
+use App\Services\Device\DeviceService;
+use App\Services\Units\UnitContextResolver;
 use Idei\Usim\Components\Textarea;
 use Idei\Usim\Enums\JustifyContent;
 use Idei\Usim\Enums\LayoutType;
+use Idei\Usim\Models\UsimUnit;
 use Idei\Usim\UI;
 use Idei\Usim\UIChangesCollector;
 use Idei\Usim\ValueObjects\Size;
 use Idei\Usim\ValueObjects\Spacing;
+use Illuminate\Support\Facades\Auth;
 
 class EditPostDialog
 {
@@ -21,10 +25,11 @@ class EditPostDialog
         string $submitAction = 'submit_save_post',
         string $cancelAction = 'close_modal',
         ?Post $post = null,
-        ?int $callerServiceId = null
+        ?int $callerServiceId = null,
+        ?int $unitId = null
     ): void {
-        $dialog = new self();
-        $format = $dialog->getUI($submitAction, $cancelAction, $post, $callerServiceId);
+        $dialog = new self;
+        $format = $dialog->getUI($submitAction, $cancelAction, $post, $callerServiceId, $unitId);
         /** @var UIChangesCollector $uiChanges */
         $uiChanges = app(UIChangesCollector::class);
         $uiChanges->add($format);
@@ -39,7 +44,8 @@ class EditPostDialog
         string $submitAction = 'submit_save_post',
         string $cancelAction = 'close_modal',
         ?Post $post = null,
-        ?int $callerServiceId = null
+        ?int $callerServiceId = null,
+        ?int $unitId = null
     ): array {
         $isEditing = $post !== null;
         $titleText = $isEditing ? 'Editar Publicación' : 'Nueva Publicación';
@@ -171,6 +177,61 @@ class EditPostDialog
         );
 
         $contentSection->add($settingsContainer);
+
+        // Dispositivos Smart TV seleccionables (unidad actual e institucionales/públicos)
+        $effectiveUnitId = $unitId ?? $post?->unit_id;
+        if ($effectiveUnitId === null) {
+            $user = Auth::user();
+            $requestStorage = request()->storage;
+            $storageUnit = request()->input('storage.store_unit')
+                ?? (is_array($requestStorage) ? $requestStorage['store_unit'] ?? null : null);
+            if (is_string($storageUnit) && $storageUnit !== '') {
+                $resolved = UnitContextResolver::resolve($user, $storageUnit);
+                if ($resolved) {
+                    $effectiveUnitId = $resolved->id;
+                }
+            }
+            if ($effectiveUnitId === null && function_exists('getPermissionsTeamId') && getPermissionsTeamId()) {
+                $effectiveUnitId = (int) getPermissionsTeamId();
+            }
+        }
+
+        /** @var DeviceService $deviceService */
+        $deviceService = app(DeviceService::class);
+        $devices = $deviceService->getSmartTvDevicesForUnit($effectiveUnitId);
+
+        $deviceOptions = [];
+        foreach ($devices as $dev) {
+            $isPub = $dev->isPublic();
+            $firstUnit = $dev->usimUnits->first(static fn (UsimUnit $u): bool => $u->slug !== 'main');
+            $unitLabel = $isPub ? 'Institucional / Público' : ($firstUnit ? ($firstUnit->display_name ?: ucfirst($firstUnit->slug)) : 'Público');
+            $deviceOptions[] = [
+                'value' => (string) $dev->id,
+                'label' => "📺 {$dev->name} ({$unitLabel})",
+            ];
+        }
+
+        $selectedDeviceIds = [];
+        if ($post !== null) {
+            $selectedDeviceIds = $post->devices->pluck('id')->map(static fn (mixed $id): string => (string) $id)->all();
+        }
+
+        if (! empty($deviceOptions)) {
+            $contentSection->add(
+                UI::checkbox('post_devices')
+                    ->label('📺 Dispositivos Smart TV de Difusión')
+                    ->options($deviceOptions)
+                    ->selectedValues($selectedDeviceIds)
+                    ->vertical()
+            );
+        } else {
+            $contentSection->add(
+                UI::label('lbl_no_devices')
+                    ->text('ℹ️ No hay dispositivos Smart TV configurados en esta unidad o a nivel institucional.')
+                    ->size('small')
+            );
+        }
+
         $tabsContainer->add($contentSection, tab: 'tab_content');
 
         // ================= TAB 2: MULTIMEDIA =================
@@ -181,14 +242,16 @@ class EditPostDialog
 
         $mediaSection->add(
             UI::label('lbl_media_instructions')
-                ->text('📸 / 🎥 Para publicaciones de tipo Imagen o Video, sube el archivo a difundir mediante el uploader a continuación:')
+                ->text('📸 / 🎥 Para publicaciones de tipo Imagen o Video, sube el archivo a difundir mediante el uploader a continuación (las imágenes deben tener proporción 16:9):')
                 ->fontSize('13px')
         );
 
-        // Uploader para imagen o video
+        // Uploader para imagen o video (formato 16:9)
         $uploader = UI::uploader('post_uploader')
-            ->label('Subir Archivo Multimedia (Imagen o Video)')
+            ->label('Subir Archivo Multimedia (Imagen o Video - Proporción 16:9)')
             ->media()
+            ->aspect('16:9')
+            ->size(3)
             ->multiple(false)
             ->maxFiles(1)
             ->maxSize(50);

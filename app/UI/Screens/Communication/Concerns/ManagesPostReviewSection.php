@@ -63,10 +63,11 @@ trait ManagesPostReviewSection
             );
 
             $panel->add($emptyContainer);
+
             return $panel;
         }
 
-        $mediaPresenter = new PostMediaPresenter();
+        $mediaPresenter = new PostMediaPresenter;
 
         // Header del post
         $header = UI::container('panel_header')
@@ -104,7 +105,10 @@ trait ManagesPostReviewSection
         $header->add($titleRow);
 
         $authorName = $post->author->name;
-        $unitName = $post->unit->display_name ?: $post->unit->slug;
+        $displayName = $post->unit->display_name;
+        $unitName = (! empty($displayName) && $displayName !== $post->unit->translation_key)
+            ? $displayName
+            : ucfirst($post->unit->slug);
         $header->add(
             UI::label('panel_post_meta')
                 ->text("👤 Autor: {$authorName} | 🏛️ Unidad: {$unitName} | 📂 Tipo: {$post->type->label()}")
@@ -149,8 +153,11 @@ trait ManagesPostReviewSection
         }
 
         // Ficha técnica (Fechas y Pantallas)
-        $dates = $post->starts_at->format('d/m/Y H:i') . ' al ' . $post->ends_at->format('d/m/Y H:i');
-        $kioskInfo = "{$post->display_duration_sec} segs" . ($post->is_public ? ' | 🌐 Difusión Pública' : ' | 📍 Kiosks de la Unidad');
+        $dates = $post->starts_at->format('d/m/Y H:i').' al '.$post->ends_at->format('d/m/Y H:i');
+        $kioskInfo = "{$post->display_duration_sec} segs".($post->is_public ? ' | 🌐 Difusión Pública' : ' | 📍 Kiosks de la Unidad');
+        if ($post->devices->isNotEmpty()) {
+            $kioskInfo .= ' | 📺 '.$post->devices->pluck('name')->implode(', ');
+        }
 
         $infoRow = UI::container('panel_info_row')
             ->layout(LayoutType::HORIZONTAL)

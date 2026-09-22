@@ -15,7 +15,7 @@ use InvalidArgumentException;
 class PostService implements PostServiceContract
 {
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function create(array $data, User $author, int $unitId): Post
     {
@@ -40,19 +40,23 @@ class PostService implements PostServiceContract
             'is_public' => isset($validated['is_public']) ? (bool) $validated['is_public'] : false,
         ]);
 
+        if (array_key_exists('device_ids', $validated)) {
+            $post->devices()->sync($validated['device_ids'] ?? []);
+        }
+
         return $post;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function update(Post $post, array $data, User $user): Post
     {
-        if ($post->user_id !== $user->id && !$user->hasRole('admin')) {
+        if ($post->user_id !== $user->id && ! $user->hasRole('admin')) {
             throw new InvalidArgumentException(t('service.post.unauthorized_edit'));
         }
 
-        if (!$post->status->canBeEdited()) {
+        if (! $post->status->canBeEdited()) {
             throw new InvalidArgumentException(t('service.post.cannot_edit_status'));
         }
 
@@ -80,19 +84,23 @@ class PostService implements PostServiceContract
             'rejection_reason' => $submitNow ? null : $post->rejection_reason,
         ]);
 
+        if (array_key_exists('device_ids', $validated)) {
+            $post->devices()->sync($validated['device_ids'] ?? []);
+        }
+
         return $post->fresh() ?? $post;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function submitForApproval(Post $post, User $user): Post
     {
-        if ($post->user_id !== $user->id && !$user->hasRole('admin')) {
+        if ($post->user_id !== $user->id && ! $user->hasRole('admin')) {
             throw new InvalidArgumentException(t('service.post.unauthorized_submit'));
         }
 
-        if (!$post->status->canBeSubmitted()) {
+        if (! $post->status->canBeSubmitted()) {
             throw new InvalidArgumentException(t('service.post.cannot_submit_status'));
         }
 
@@ -105,11 +113,11 @@ class PostService implements PostServiceContract
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function approve(Post $post, User $approver): Post
     {
-        if (!$post->status->canBeModerated()) {
+        if (! $post->status->canBeModerated()) {
             throw new InvalidArgumentException(t('service.post.cannot_moderate_status'));
         }
 
@@ -124,11 +132,11 @@ class PostService implements PostServiceContract
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function reject(Post $post, User $approver, string $reason): Post
     {
-        if (!$post->status->canBeModerated()) {
+        if (! $post->status->canBeModerated()) {
             throw new InvalidArgumentException(t('service.post.cannot_moderate_status'));
         }
 
@@ -148,11 +156,11 @@ class PostService implements PostServiceContract
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function delete(Post $post, User $user): bool
     {
-        if ($post->user_id !== $user->id && !$user->hasRole('admin')) {
+        if ($post->user_id !== $user->id && ! $user->hasRole('admin')) {
             throw new InvalidArgumentException(t('service.post.unauthorized_delete'));
         }
 
@@ -162,8 +170,7 @@ class PostService implements PostServiceContract
     /**
      * Validate raw input data for post creation/update.
      *
-     * @param array<string, mixed> $data
-     * @param bool $isUpdate
+     * @param  array<string, mixed>  $data
      * @return array{
      *     title?: string,
      *     content?: string|null,
@@ -176,6 +183,7 @@ class PostService implements PostServiceContract
      *     is_public?: bool,
      *     submit_now?: bool
      * }
+     *
      * @throws ValidationException
      */
     protected function validatePostData(array $data, bool $isUpdate = false): array
@@ -183,7 +191,7 @@ class PostService implements PostServiceContract
         $rules = [
             'title' => array_merge($isUpdate ? ['sometimes'] : [], ['required', 'string', 'max:255']),
             'content' => ['nullable', 'string'],
-            'type' => array_merge($isUpdate ? ['sometimes'] : [], ['required', 'string', 'in:' . implode(',', PostType::values())]),
+            'type' => array_merge($isUpdate ? ['sometimes'] : [], ['required', 'string', 'in:'.implode(',', PostType::values())]),
             'media_url' => ['nullable', 'string'],
             'media_mime' => ['nullable', 'string', 'max:100'],
             'starts_at' => array_merge($isUpdate ? ['sometimes'] : [], ['required', 'date']),
@@ -191,6 +199,8 @@ class PostService implements PostServiceContract
             'display_duration_sec' => ['nullable', 'integer', 'min:3', 'max:120'],
             'is_public' => ['nullable', 'boolean'],
             'submit_now' => ['nullable', 'boolean'],
+            'device_ids' => ['nullable', 'array'],
+            'device_ids.*' => ['integer', 'exists:devices,id'],
         ];
 
         $validator = Validator::make($data, $rules);

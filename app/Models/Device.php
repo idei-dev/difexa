@@ -1,13 +1,21 @@
 <?php
+
 // @usim: feature="admin", type="model"
+
 namespace App\Models;
 
+use Database\Factories\DeviceFactory;
+use Idei\Usim\Models\UsimRole;
 use Idei\Usim\Models\UsimUnit;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Carbon;
+use Laravel\Sanctum\HasApiTokens;
+use Laravel\Sanctum\PersonalAccessToken;
 use Spatie\Permission\Traits\HasRoles;
-use Laravel\Sanctum\HasApiTokens; // Lo dejamos preparado para el Token definitivo
 
 /**
  * @property int $id
@@ -15,17 +23,18 @@ use Laravel\Sanctum\HasApiTokens; // Lo dejamos preparado para el Token definiti
  * @property string|null $pairing_pin
  * @property string|null $device_token
  * @property array<string, mixed>|null $specs
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \Laravel\Sanctum\PersonalAccessToken> $tokens
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \Idei\Usim\Models\UsimRole> $roles
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \Idei\Usim\Models\UsimRole> $globalRoles
- * @property-read \Illuminate\Database\Eloquent\Collection<int, UsimUnit> $usimUnits
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Collection<int, PersonalAccessToken> $tokens
+ * @property-read Collection<int, UsimRole> $roles
+ * @property-read Collection<int, UsimRole> $globalRoles
+ * @property-read Collection<int, UsimUnit> $usimUnits
+ * @property-read Collection<int, Post> $posts
  */
 class Device extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\DeviceFactory> */
-    use HasFactory, HasRoles, HasApiTokens;
+    /** @use HasFactory<DeviceFactory> */
+    use HasApiTokens, HasFactory, HasRoles;
 
     /**
      * Guard de autenticación de Spatie y Laravel para dispositivos.
@@ -64,12 +73,12 @@ class Device extends Authenticatable
     /**
      * Roles across all units, bypassing Spatie's team filter.
      *
-     * @return MorphToMany<\Idei\Usim\Models\UsimRole, $this>
+     * @return MorphToMany<UsimRole, $this>
      */
     public function globalRoles(): MorphToMany
     {
-        /** @var class-string<\Idei\Usim\Models\UsimRole> $roleModel */
-        $roleModel = config('permission.models.role', \Idei\Usim\Models\UsimRole::class);
+        /** @var class-string<UsimRole> $roleModel */
+        $roleModel = config('permission.models.role', UsimRole::class);
         /** @var string $modelHasRolesTable */
         $modelHasRolesTable = config('permission.table_names.model_has_roles', 'model_has_roles');
         /** @var string $modelMorphKey */
@@ -84,6 +93,7 @@ class Device extends Authenticatable
     public function isPublic(): bool
     {
         $units = $this->relationLoaded('usimUnits') ? $this->usimUnits : $this->usimUnits()->get();
+
         return $units->isEmpty() || $units->contains('slug', 'main');
     }
 
@@ -93,6 +103,17 @@ class Device extends Authenticatable
     public function isShared(): bool
     {
         $units = $this->relationLoaded('usimUnits') ? $this->usimUnits : $this->usimUnits()->get();
-        return $units->filter(static fn(UsimUnit $u): bool => $u->type !== 'system' && !in_array($u->slug, ['main', 'lobby'], true))->count() > 1;
+
+        return $units->filter(static fn (UsimUnit $u): bool => $u->type !== 'system' && ! in_array($u->slug, ['main', 'lobby'], true))->count() > 1;
+    }
+
+    /**
+     * Posts specifically targeted to this device.
+     *
+     * @return BelongsToMany<Post, $this>
+     */
+    public function posts(): BelongsToMany
+    {
+        return $this->belongsToMany(Post::class, 'device_post')->withTimestamps();
     }
 }

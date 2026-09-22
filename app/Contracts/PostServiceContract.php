@@ -20,18 +20,15 @@ interface PostServiceContract
      *     ends_at: string,
      *     display_duration_sec?: int,
      *     is_public?: bool,
-     *     submit_now?: bool
+     *     submit_now?: bool,
+     *     device_ids?: list<int>
      * } $data
-     * @param User $author
-     * @param int $unitId
-     * @return Post
      */
     public function create(array $data, User $author, int $unitId): Post;
 
     /**
      * Update an existing post.
      *
-     * @param Post $post
      * @param array{
      *     title?: string,
      *     content?: string|null,
@@ -42,10 +39,9 @@ interface PostServiceContract
      *     ends_at?: string,
      *     display_duration_sec?: int,
      *     is_public?: bool,
-     *     submit_now?: bool
+     *     submit_now?: bool,
+     *     device_ids?: list<int>
      * } $data
-     * @param User $user
-     * @return Post
      */
     public function update(Post $post, array $data, User $user): Post;
 
@@ -69,4 +65,3 @@ interface PostServiceContract
      */
     public function delete(Post $post, User $user): bool;
 }
-

@@ -1,10 +1,13 @@
 <?php
+
 // @usim: feature="admin", type="service"
+
 namespace App\Services\Device;
 
 use App\Models\Device;
 use Idei\Usim\Models\UsimUnit;
 use Idei\Usim\Support\DevicePairingManager;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -35,19 +38,19 @@ class DeviceService
 
         /** @var list<int> $unitIds */
         $unitIds = [];
-        if (!empty($data['unit_ids'])) {
-            $unitIds = array_map(static fn(int|string $unitId): int => (int) $unitId, $data['unit_ids']);
-        } elseif (!empty($data['unit_id'])) {
+        if (! empty($data['unit_ids'])) {
+            $unitIds = array_map(static fn (int|string $unitId): int => (int) $unitId, $data['unit_ids']);
+        } elseif (! empty($data['unit_id'])) {
             $unitIds = [(int) $data['unit_id']];
         }
 
-        if (!empty($unitIds)) {
+        if (! empty($unitIds)) {
             $device->usimUnits()->sync($unitIds);
         }
 
-        if (!empty($data['roles'])) {
+        if (! empty($data['roles'])) {
             $roles = is_array($data['roles']) ? $data['roles'] : [$data['roles']];
-            $targetUnits = !empty($unitIds) ? $unitIds : [null];
+            $targetUnits = ! empty($unitIds) ? $unitIds : [null];
 
             foreach ($targetUnits as $targetUnitId) {
                 if ($targetUnitId !== null && function_exists('setPermissionsTeamId') && function_exists('getPermissionsTeamId')) {
@@ -68,7 +71,6 @@ class DeviceService
     }
 
     /**
-     * @param int|string $id
      * @param array{
      *     name?: string,
      *     roles?: list<string>|string,
@@ -80,7 +82,7 @@ class DeviceService
     public function updateDevice(int|string $id, array $data): ?Device
     {
         $device = $this->getDevice($id);
-        if (!$device) {
+        if (! $device) {
             return null;
         }
 
@@ -97,7 +99,7 @@ class DeviceService
         /** @var list<int>|null $unitIds */
         $unitIds = null;
         if (array_key_exists('unit_ids', $data)) {
-            $unitIds = array_map(static fn(int|string $unitId): int => (int) $unitId, $data['unit_ids']);
+            $unitIds = array_map(static fn (int|string $unitId): int => (int) $unitId, $data['unit_ids']);
         } elseif (array_key_exists('unit_id', $data)) {
             $unitIds = $data['unit_id'] !== null ? [(int) $data['unit_id']] : [];
         }
@@ -110,10 +112,10 @@ class DeviceService
             $roles = is_array($data['roles']) ? $data['roles'] : [$data['roles']];
             /** @var list<int> $effectiveUnits */
             $effectiveUnits = $unitIds ?? array_map(
-                static fn(mixed $unitId): int => is_int($unitId) || is_string($unitId) ? (int) $unitId : 0,
+                static fn (mixed $unitId): int => is_int($unitId) || is_string($unitId) ? (int) $unitId : 0,
                 $device->usimUnits->pluck('id')->all()
             );
-            $targetUnits = !empty($effectiveUnits) ? $effectiveUnits : [null];
+            $targetUnits = ! empty($effectiveUnits) ? $effectiveUnits : [null];
 
             foreach ($targetUnits as $targetUnitId) {
                 if ($targetUnitId !== null && function_exists('setPermissionsTeamId') && function_exists('getPermissionsTeamId')) {
@@ -136,19 +138,17 @@ class DeviceService
     /**
      * Share a device with specified unit(s), replicating its roles in those units.
      *
-     * @param int|string $id
-     * @param int|string|list<int|string> $unitIds
-     * @return Device|null
+     * @param  int|string|list<int|string>  $unitIds
      */
     public function shareDevice(int|string $id, int|string|array $unitIds): ?Device
     {
         $device = $this->getDevice($id);
-        if (!$device) {
+        if (! $device) {
             return null;
         }
 
         $units = is_array($unitIds)
-            ? array_map(static fn(int|string $unitId): int => (int) $unitId, $unitIds)
+            ? array_map(static fn (int|string $unitId): int => (int) $unitId, $unitIds)
             : [(int) $unitIds];
         $device->usimUnits()->syncWithoutDetaching($units);
 
@@ -157,7 +157,7 @@ class DeviceService
             $existingRoles = $device->globalRoles->pluck('name')->filter('is_string')->all();
         }
 
-        if (!empty($existingRoles) && function_exists('setPermissionsTeamId') && function_exists('getPermissionsTeamId')) {
+        if (! empty($existingRoles) && function_exists('setPermissionsTeamId') && function_exists('getPermissionsTeamId')) {
             $prevTeamId = getPermissionsTeamId();
             try {
                 foreach ($units as $uId) {
@@ -178,7 +178,7 @@ class DeviceService
     public function makeDeviceInstitutional(int|string $id): ?Device
     {
         $rawMainId = UsimUnit::where('slug', 'main')->value('id');
-        if (!is_numeric($rawMainId)) {
+        if (! is_numeric($rawMainId)) {
             return null;
         }
 
@@ -188,7 +188,7 @@ class DeviceService
     public function deleteDevice(int|string $id): bool
     {
         $device = $this->getDevice($id);
-        if (!$device) {
+        if (! $device) {
             return false;
         }
 
@@ -201,7 +201,7 @@ class DeviceService
     public function unpairDevice(int|string $id): bool
     {
         $device = $this->getDevice($id);
-        if (!$device) {
+        if (! $device) {
             return false;
         }
 
@@ -227,7 +227,7 @@ class DeviceService
         }
 
         $device = $this->getDevice($id);
-        if (!$device) {
+        if (! $device) {
             return [
                 'success' => false,
                 'message' => 'Dispositivo no encontrado.',
@@ -279,7 +279,7 @@ class DeviceService
         }
 
         $manager = $this->pairingManager ?? app(DevicePairingManager::class);
-        if (!$manager->isValidPin($cleanPin)) {
+        if (! $manager->isValidPin($cleanPin)) {
             return [
                 'success' => false,
                 'message' => t('screen.admin.users_manager.device_invalid_pin'),
@@ -291,8 +291,9 @@ class DeviceService
             $device = $this->createDevice($data);
             $success = $manager->approve($cleanPin, $device);
 
-            if (!$success) {
+            if (! $success) {
                 DB::rollBack();
+
                 return [
                     'success' => false,
                     'message' => t('screen.admin.users_manager.device_invalid_pin'),
@@ -329,5 +330,39 @@ class DeviceService
     public function getAllDevices(): Collection
     {
         return Device::with(['tokens', 'roles', 'globalRoles', 'usimUnits'])->orderBy('name')->get();
+    }
+
+    /**
+     * Retrieve devices with role 'smart-tv' belonging to the given unit
+     * or configured as public/institutional (main or without unit assignment).
+     *
+     * @return Collection<int, Device>
+     */
+    public function getSmartTvDevicesForUnit(?int $unitId): Collection
+    {
+        $query = Device::query()->with(['tokens', 'roles', 'globalRoles', 'usimUnits']);
+
+        // Filter by role 'smart-tv' or 'smart_tv'
+        $query->where(function (Builder $rq): void {
+            $rq->whereHas('globalRoles', function (Builder $gq): void {
+                $gq->whereIn('name', ['smart-tv', 'smart_tv']);
+            })->orWhereHas('roles', function (Builder $lq): void {
+                $lq->whereIn('name', ['smart-tv', 'smart_tv']);
+            });
+        });
+
+        // Filter by active unit OR public/institutional (main or no units)
+        $query->where(function (Builder $uq) use ($unitId): void {
+            if ($unitId !== null && $unitId > 0) {
+                $uq->whereHas('usimUnits', function (Builder $q) use ($unitId): void {
+                    $q->where('usim_units.id', $unitId);
+                });
+            }
+            $uq->orWhereHas('usimUnits', function (Builder $q): void {
+                $q->where('slug', 'main');
+            })->orDoesntHave('usimUnits');
+        });
+
+        return $query->orderBy('name')->get();
     }
 }

@@ -26,7 +26,7 @@ class ViewPostDialog
         ?Post $post = null,
         ?int $callerServiceId = null
     ): void {
-        $dialog = new self();
+        $dialog = new self;
         $format = $dialog->getUI($closeAction, $approveAction, $rejectAction, $post, $callerServiceId);
         /** @var UIChangesCollector $uiChanges */
         $uiChanges = app(UIChangesCollector::class);
@@ -53,7 +53,7 @@ class ViewPostDialog
             ->padding(Spacing::px(14))
             ->gap(Spacing::px(12));
 
-        if (!$post) {
+        if (! $post) {
             $container->add(
                 UI::label('empty_info')->text('No se encontró la información del post.')
             );
@@ -61,7 +61,7 @@ class ViewPostDialog
             return $container->toJson();
         }
 
-        $mediaPresenter = new PostMediaPresenter();
+        $mediaPresenter = new PostMediaPresenter;
 
         $container->add(
             UI::label('dialog_title')
@@ -71,7 +71,10 @@ class ViewPostDialog
         );
 
         $authorName = $post->author->name;
-        $unitName = $post->unit->display_name ?: $post->unit->slug;
+        $displayName = $post->unit->display_name;
+        $unitName = (! empty($displayName) && $displayName !== $post->unit->translation_key)
+            ? $displayName
+            : ucfirst($post->unit->slug);
 
         $infoRow = UI::container('post_meta_info')
             ->layout(LayoutType::HORIZONTAL)
@@ -84,8 +87,11 @@ class ViewPostDialog
 
         $container->add($infoRow);
 
-        $dates = $post->starts_at->format('d/m/Y H:i') . ' al ' . $post->ends_at->format('d/m/Y H:i');
-        $kioskInfo = "{$post->display_duration_sec} segs" . ($post->is_public ? ' | 🌐 Todos los Kiosks' : ' | 📍 Kiosks de la Unidad');
+        $dates = $post->starts_at->format('d/m/Y H:i').' al '.$post->ends_at->format('d/m/Y H:i');
+        $kioskInfo = "{$post->display_duration_sec} segs".($post->is_public ? ' | 🌐 Todos los Kiosks' : ' | 📍 Kiosks de la Unidad');
+        if ($post->devices->isNotEmpty()) {
+            $kioskInfo .= ' | 📺 '.$post->devices->pluck('name')->implode(', ');
+        }
 
         $scheduleRow = UI::container('post_schedule_info')
             ->layout(LayoutType::HORIZONTAL)

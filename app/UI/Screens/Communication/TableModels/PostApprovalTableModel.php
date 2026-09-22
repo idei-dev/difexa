@@ -16,9 +16,28 @@ use Idei\Usim\DataTable\AbstractListingTableModel;
  */
 class PostApprovalTableModel extends AbstractListingTableModel
 {
+    protected ?string $statusFilter = PostStatus::PENDING->value;
+
     public function __construct(Table $tableBuilder)
     {
         parent::__construct($tableBuilder);
+    }
+
+    public function setStatusFilter(?string $status): self
+    {
+        $this->statusFilter = $status;
+
+        return $this;
+    }
+
+    protected function getFilters(): array
+    {
+        $filters = [];
+        if (! empty($this->statusFilter)) {
+            $filters['status'] = $this->statusFilter;
+        }
+
+        return $filters;
     }
 
     protected function resolveListingService(): PostListingService
@@ -34,42 +53,33 @@ class PostApprovalTableModel extends AbstractListingTableModel
         return [
             'title' => [
                 'label' => 'Título',
-                'width' => 220,
+                'width' => 200,
                 'sort_by' => 'title',
             ],
             'author' => [
                 'label' => 'Autor',
-                'width' => 160,
+                'width' => 130,
                 'sort_by' => 'author_name',
             ],
             'unit' => [
                 'label' => 'Unidad',
-                'width' => 150,
+                'width' => 130,
             ],
             'type' => [
                 'label' => 'Tipo',
-                'width' => 100,
+                'width' => 90,
                 'sort_by' => 'type',
             ],
             'status' => [
                 'label' => 'Estado',
-                'width' => 140,
+                'width' => 110,
                 'sort_by' => 'status',
-            ],
-            'dates' => [
-                'label' => 'Vigencia',
-                'width' => 180,
-                'sort_by' => 'starts_at',
-            ],
-            'kiosk' => [
-                'label' => 'Kiosk',
-                'width' => 130,
             ],
         ];
     }
 
     /**
-     * @param Post $item
+     * @param  Post  $item
      * @return array{
      *     _model_id: int|string,
      *     title: string,
@@ -101,9 +111,10 @@ class PostApprovalTableModel extends AbstractListingTableModel
         };
 
         $authorName = $post->author->name;
-        $unitName = $post->unit->display_name ?: $post->unit->slug;
-        $dates = $post->starts_at->format('d/m/Y') . ' al ' . $post->ends_at->format('d/m/Y');
-        $kiosk = "{$post->display_duration_sec}s" . ($post->is_public ? ' (Público)' : '');
+        $displayName = $post->unit->display_name;
+        $unitName = (! empty($displayName) && $displayName !== $post->unit->translation_key)
+            ? $displayName
+            : ucfirst($post->unit->slug);
 
         return [
             '_model_id' => $post->id,
@@ -112,8 +123,6 @@ class PostApprovalTableModel extends AbstractListingTableModel
             'unit' => $unitName,
             'type' => "{$typeIcon} {$post->type->label()}",
             'status' => $statusBadge,
-            'dates' => $dates,
-            'kiosk' => $kiosk,
         ];
     }
 }

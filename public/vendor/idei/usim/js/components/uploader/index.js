@@ -31,9 +31,12 @@ class UploaderComponent extends UIComponent {
 
         // Detectar si es modo imagen única
         this.isSingleImageMode = this.config.max_files === 1 &&
-                                 this.config.allowed_types &&
-                                 this.config.allowed_types.length === 1 &&
-                                 this.config.allowed_types[0] === 'image/*';
+                                 (
+                                     (this.config.allowed_types &&
+                                      this.config.allowed_types.length === 1 &&
+                                      this.config.allowed_types[0] === 'image/*') ||
+                                     Boolean(this.config.aspect_ratio)
+                                 );
 
         // Label
         if (this.config.label) {
@@ -83,7 +86,7 @@ class UploaderComponent extends UIComponent {
             dropzoneContent.innerHTML = `
                 <span class="ui-uploader-icon">📁</span>
                 <p class="ui-uploader-hint-hover">
-                    Máximo ${this.config.max_files} archivo(s) · ${this.config.max_size}MB
+                    Proporción ${this.config.aspect_ratio} · Máx. ${this.config.max_size}MB
                 </p>
             `;
         } else {
@@ -177,8 +180,16 @@ class UploaderComponent extends UIComponent {
             if (error) {
                 this.showError(`${file.name}: ${error}`);
             } else {
-                // Si es modo single image con aspect ratio, verificar y abrir crop editor si es necesario
-                if (this.isSingleImageMode && this.config.aspect_ratio && file.type.startsWith('image/')) {
+                if (file.type?.startsWith('image/') || this.detectType(file.type) === 'image') {
+                    const postTypeSelect = document.querySelector('select[name="post_type"], select#post_type, select[data-component-name="post_type"]');
+                    if (postTypeSelect && postTypeSelect.value !== 'image') {
+                        postTypeSelect.value = 'image';
+                        postTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
+
+                // Si tiene aspect ratio y es una imagen, verificar y abrir crop editor si es necesario
+                if (this.config.aspect_ratio && file.type.startsWith('image/') && this.config.max_files === 1) {
                     this.checkAndCropImage(file);
                 } else {
                     this.uploadFile(file);
@@ -299,6 +310,14 @@ class UploaderComponent extends UIComponent {
                 // Agregar a lista de archivos subidos
                 this.uploadedFiles.push(result.data);
                 this.updateHiddenInput();
+
+                if (file.type?.startsWith('image/') || this.detectType(file.type) === 'image') {
+                    const postTypeSelect = document.querySelector('select[name="post_type"], select#post_type, select[data-component-name="post_type"]');
+                    if (postTypeSelect && postTypeSelect.value !== 'image') {
+                        postTypeSelect.value = 'image';
+                        postTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
             } else {
                 this.updateFileItem(fileItem, { original_filename: file.name }, 'error');
                 this.showError(result.message || 'Error al subir archivo');
