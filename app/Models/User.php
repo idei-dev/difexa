@@ -1,4 +1,5 @@
 <?php
+
 // @usim: feature="admin", type="model"
 namespace App\Models;
 
@@ -14,7 +15,6 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
-
 class User extends Authenticatable implements MustVerifyEmail, CanResetPassword
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -96,14 +96,11 @@ class User extends Authenticatable implements MustVerifyEmail, CanResetPassword
         }
         return $this->globalRoles()->where('name', $defaultRegisteringRole)->exists() && $this->usimUnits()->where('slug', 'lobby')->exists();
     }
-
     /**
      * Determine if the user has moderation privileges for the communication unit.
      */
     public function isCommunicationMember(): bool
     {
-        return $this->isRoot()
-            || $this->hasRole('admin')
-            || $this->usimUnits()->whereIn('slug', ['comunicacion', 'comunicación'])->exists();
+        return $this->isRoot() || $this->hasRole('admin') || $this->usimUnits()->whereIn('slug', ['comunicacion', 'comunicación'])->exists();
     }
 }
