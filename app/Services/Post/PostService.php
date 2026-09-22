@@ -181,7 +181,8 @@ class PostService implements PostServiceContract
      *     ends_at?: string,
      *     display_duration_sec?: int,
      *     is_public?: bool,
-     *     submit_now?: bool
+     *     submit_now?: bool,
+     *     device_ids?: array<int>|null
      * }
      *
      * @throws ValidationException
@@ -219,7 +220,8 @@ class PostService implements PostServiceContract
          *     ends_at?: string,
          *     display_duration_sec?: int,
          *     is_public?: bool,
-         *     submit_now?: bool
+         *     submit_now?: bool,
+         *     device_ids?: array<int>|null
          * } $validated */
         $validated = $validator->validated();
 

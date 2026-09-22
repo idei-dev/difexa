@@ -86,9 +86,7 @@ class PostApprovalTableModel extends AbstractListingTableModel
      *     author: string,
      *     unit: string,
      *     type: string,
-     *     status: string,
-     *     dates: string,
-     *     kiosk: string
+     *     status: string
      * }
      */
     protected function formatRow(object $item): array

@@ -211,9 +211,12 @@ class EditPostDialog
             ];
         }
 
+        /** @var list<string> $selectedDeviceIds */
         $selectedDeviceIds = [];
         if ($post !== null) {
-            $selectedDeviceIds = $post->devices->pluck('id')->map(static fn (mixed $id): string => (string) $id)->all();
+            $selectedDeviceIds = array_values(
+                $post->devices->pluck('id')->map(static fn (mixed $id): string => is_scalar($id) ? (string) $id : '')->all()
+            );
         }
 
         if (! empty($deviceOptions)) {

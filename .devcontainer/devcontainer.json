@@ -33,7 +33,16 @@
     "customizations": {
         "vscode": {
             "settings": {
-                "terminal.integrated.defaultProfile.linux": "bash"
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "phpunit.phpunit": "vendor/bin/pest",
+                "phpunit.command": "vendor/bin/pest",
+                "php.phpunit.phpunitPath": "vendor/bin/pest",
+                "php.phpunit.executablePath": "vendor/bin/pest",
+                "php.suggest.basic": false,
+                "intelephense.environment.includePaths": [
+                    "vendor/**",
+                    "tests/**"
+                ]
             },
             "extensions": [
                 "bmewburn.vscode-intelephense-client",
