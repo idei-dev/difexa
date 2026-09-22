@@ -9,13 +9,14 @@ use App\Models\User;
 use App\UI\Components\Modals\RejectPostDialog;
 use App\UI\Components\Modals\ViewPostDialog;
 use App\UI\Screens\Admin\Concerns\HandlesScreenParameters;
+use App\UI\Screens\Communication\Concerns\ManagesPostReviewSection;
 use App\UI\Screens\Communication\TableModels\PostApprovalTableModel;
 use Idei\Usim\Components\Container;
 use Idei\Usim\Components\Input;
 use Idei\Usim\Components\Select;
+use Idei\Usim\Components\Split;
 use Idei\Usim\Components\Table;
 use Idei\Usim\Enums\AlignItems;
-use Idei\Usim\Enums\JustifyContent;
 use Idei\Usim\Enums\LayoutType;
 use Idei\Usim\Enums\SelectionMode;
 use Idei\Usim\Screen;
@@ -28,10 +29,14 @@ use Throwable;
 class PostApprovalScreen extends Screen
 {
     use HandlesScreenParameters;
+    use ManagesPostReviewSection;
 
     protected Table $posts_table;
     protected Input $search_posts;
     protected Select $filter_status;
+    protected Split $moderation_split;
+
+    protected ?int $store_selected_post_id = null;
 
     protected PostServiceContract $postService;
 
@@ -61,9 +66,9 @@ class PostApprovalScreen extends Screen
         $container
             ->plain()
             ->maxWidth(Size::px(1280))
-            ->padding(Spacing::px(20))
+            ->padding(Spacing::px(16))
             ->centerHorizontal()
-            ->gap(Spacing::px(16));
+            ->gap(Spacing::px(14));
 
         // Header
         $header = UI::container('approval_header')
@@ -95,7 +100,7 @@ class PostApprovalScreen extends Screen
 
         $this->search_posts = UI::input('search_posts')
             ->placeholder('Buscar por título o autor...')
-            ->width(Size::px(300))
+            ->width(Size::px(260))
             ->autocomplete('off')
             ->onInput('search_posts', [])
             ->debounce(400);
@@ -112,11 +117,10 @@ class PostApprovalScreen extends Screen
             ->label('Estado')
             ->options($statusOptions)
             ->value(PostStatus::PENDING->value)
-            ->width(Size::px(240));
+            ->width(Size::px(220));
 
         $toolbar->add($this->search_posts);
         $toolbar->add($this->filter_status);
-        $container->add($toolbar);
 
         // Tabla de moderación
         $this->posts_table = UI::table('posts_table')
@@ -124,13 +128,44 @@ class PostApprovalScreen extends Screen
             ->selectionMode(SelectionMode::SINGLE)
             ->sortedBy('created_at', 'desc')
             ->fitContainer(
-                availableHeight: 550,
+                availableHeight: 520,
                 rowHeight: 45,
                 hasToolbar: true,
                 paginated: true
             );
 
-        $container->add($this->posts_table);
+        if ($this->store_selected_post_id !== null) {
+            $this->posts_table->select($this->store_selected_post_id);
+        }
+
+        $tableSection = UI::container('table_section')
+            ->layout(LayoutType::VERTICAL)
+            ->gap(Spacing::px(10))
+            ->plain();
+
+        $tableSection->add($toolbar);
+        $tableSection->add($this->posts_table);
+
+        // Panel de inspección y previsualización multimedia en vivo para el revisor
+        $selectedPost = null;
+        if ($this->store_selected_post_id !== null) {
+            $selectedPost = Post::with(['author', 'unit'])->find($this->store_selected_post_id);
+        }
+
+        $reviewPanel = $this->buildReviewPanel($selectedPost);
+
+        // Distribución en Split horizontal para el revisor
+        $this->moderation_split = UI::split('moderation_split')
+            ->horizontal()
+            ->width(Size::full())
+            ->minHeight(Size::px(600))
+            ->minFirstSize('460px')
+            ->minSecondSize('420px')
+            ->splitSize('54%')
+            ->addFirst($tableSection)
+            ->addSecond($reviewPanel);
+
+        $container->add($this->moderation_split);
     }
 
     /**
@@ -149,7 +184,8 @@ class PostApprovalScreen extends Screen
             return;
         }
 
-        ViewPostDialog::open(post: $post);
+        $this->store_selected_post_id = $post->id;
+        $this->posts_table->select($post->id);
     }
 
     /**
@@ -169,6 +205,25 @@ class PostApprovalScreen extends Screen
     /**
      * @param array<string, mixed> $params
      */
+    public function onOpenViewPostModal(array $params): void
+    {
+        $postId = $this->optionalIntParam($params, 'model_id') ?? $this->optionalIntParam($params, 'post_id');
+        if ($postId === null) {
+            return;
+        }
+
+        $post = Post::find($postId);
+        if (!$post) {
+            $this->toast(t('toast.error'), 'danger');
+            return;
+        }
+
+        ViewPostDialog::open(post: $post);
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     */
     public function onSubmitApprovePost(array $params): void
     {
         /** @var User|null $approver */
@@ -183,6 +238,7 @@ class PostApprovalScreen extends Screen
             $this->postService->approve($post, $approver);
             $this->closeModal();
             $this->toast('Publicación aprobada exitosamente para difusión.', 'success');
+            $this->store_selected_post_id = $post->id;
             $this->posts_table->refresh();
         } catch (Throwable $e) {
             $this->toast($e->getMessage(), 'danger');
@@ -226,6 +282,7 @@ class PostApprovalScreen extends Screen
             $this->postService->reject($post, $approver, $reason);
             $this->closeModal();
             $this->toast('Publicación rechazada y devuelta al autor.', 'warning');
+            $this->store_selected_post_id = $post->id;
             $this->posts_table->refresh();
         } catch (Throwable $e) {
             $this->toast($e->getMessage(), 'danger');

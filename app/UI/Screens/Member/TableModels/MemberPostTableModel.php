@@ -6,9 +6,9 @@ use App\Enums\PostStatus;
 use App\Enums\PostType;
 use App\Models\Post;
 use App\Services\Post\PostListingService;
-use Auth;
 use Idei\Usim\Components\Table;
 use Idei\Usim\DataTable\AbstractListingTableModel;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Table model for managing member's own posts listing.
@@ -35,10 +35,8 @@ class MemberPostTableModel extends AbstractListingTableModel
     protected function resolveListingService(): PostListingService
     {
         $service = app(PostListingService::class);
-        $service->forAuthor(Auth::id());
-        // if ($this->authorId !== null) {
-        //     $service->forAuthor($this->authorId);
-        // }
+        $userId = Auth::id();
+        $service->forAuthor(is_numeric($userId) ? (int) $userId : null);
 
         return $service;
     }

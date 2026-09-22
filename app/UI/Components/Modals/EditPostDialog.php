@@ -4,10 +4,12 @@ namespace App\UI\Components\Modals;
 
 use App\Enums\PostType;
 use App\Models\Post;
+use Idei\Usim\Components\Textarea;
 use Idei\Usim\Enums\JustifyContent;
 use Idei\Usim\Enums\LayoutType;
 use Idei\Usim\UI;
 use Idei\Usim\UIChangesCollector;
+use Idei\Usim\ValueObjects\Size;
 use Idei\Usim\ValueObjects\Spacing;
 
 class EditPostDialog
@@ -46,7 +48,8 @@ class EditPostDialog
             ->parent('modal')
             ->shadow(false)
             ->plain()
-            ->padding(Spacing::px(10))
+            ->width(Size::px(720))
+            ->padding(Spacing::px(14))
             ->gap(Spacing::px(14));
 
         $container->add(
@@ -64,8 +67,28 @@ class EditPostDialog
             );
         }
 
+        $activeTab = ($isEditing && $post->type->isMedia()) ? 'tab_media' : 'tab_content';
+
+        $tabsContainer = UI::container('post_edit_tabs')
+            ->tabs(
+                [
+                    'tab_content' => ['label' => '📝 Contenido y Programación'],
+                    'tab_media' => ['label' => '📎 Archivo Multimedia (Imagen / Video)'],
+                ],
+                $activeTab
+            )
+            ->width(Size::full())
+            ->plain()
+            ->gap(Spacing::px(12));
+
+        // ================= TAB 1: CONTENIDO =================
+        $contentSection = UI::container('section_content')
+            ->layout(LayoutType::VERTICAL)
+            ->gap(Spacing::px(12))
+            ->plain();
+
         // Título del post
-        $container->add(
+        $contentSection->add(
             UI::input('post_title')
                 ->label('Título de la Actividad / Noticia')
                 ->placeholder('Ej: Seminario Internacional de Biología Cuántica')
@@ -83,30 +106,23 @@ class EditPostDialog
             ];
         }
 
-        $container->add(
+        $contentSection->add(
             UI::select('post_type')
                 ->label('Tipo de Contenido')
                 ->options($typeOptions)
                 ->value($post ? $post->type->value : PostType::TEXT->value)
         );
 
-        // Contenido textual
-        $container->add(
-            UI::input('post_content')
+        // Cuerpo del mensaje usando Textarea
+        $contentSection->add(
+            (new Textarea('post_content'))
                 ->label('Cuerpo del Mensaje / Detalle')
                 ->placeholder('Descripción detallada para la difusión...')
                 ->value($post ? (string) ($post->content ?? '') : '')
+                ->height(Size::px(120))
         );
 
-        // URL multimedia (Imagen / Video)
-        $container->add(
-            UI::input('post_media_url')
-                ->label('URL de Imagen o Video (Opcional para tipo texto)')
-                ->placeholder('https://...')
-                ->value($post ? (string) ($post->media_url ?? '') : '')
-        );
-
-        // Contenedor horizontal para fechas
+        // Fechas de vigencia
         $datesContainer = UI::container('dates_container')
             ->layout(LayoutType::HORIZONTAL)
             ->justifyContent(JustifyContent::SPACE_BETWEEN)
@@ -132,9 +148,9 @@ class EditPostDialog
                 ->required(true)
         );
 
-        $container->add($datesContainer);
+        $contentSection->add($datesContainer);
 
-        // Duración en pantalla y Checkbox de Público
+        // Duración en pantalla y Checkbox de Difusión Pública
         $settingsContainer = UI::container('settings_container')
             ->layout(LayoutType::HORIZONTAL)
             ->justifyContent(JustifyContent::SPACE_BETWEEN)
@@ -154,9 +170,55 @@ class EditPostDialog
                 ->checked($post ? $post->is_public : false)
         );
 
-        $container->add($settingsContainer);
+        $contentSection->add($settingsContainer);
+        $tabsContainer->add($contentSection, tab: 'tab_content');
 
-        // Botones de acción
+        // ================= TAB 2: MULTIMEDIA =================
+        $mediaSection = UI::container('section_media')
+            ->layout(LayoutType::VERTICAL)
+            ->gap(Spacing::px(12))
+            ->plain();
+
+        $mediaSection->add(
+            UI::label('lbl_media_instructions')
+                ->text('📸 / 🎥 Para publicaciones de tipo Imagen o Video, sube el archivo a difundir mediante el uploader a continuación:')
+                ->fontSize('13px')
+        );
+
+        // Uploader para imagen o video
+        $uploader = UI::uploader('post_uploader')
+            ->label('Subir Archivo Multimedia (Imagen o Video)')
+            ->media()
+            ->multiple(false)
+            ->maxFiles(1)
+            ->maxSize(50);
+
+        if ($post !== null && is_string($post->media_url) && $post->media_url !== '') {
+            $uploader->existingFile($post->media_url);
+        }
+
+        $mediaSection->add($uploader);
+
+        // URL alternativa u opcional
+        $mediaSection->add(
+            UI::input('post_media_url')
+                ->label('URL Externa (Opcional si subiste archivo mediante el uploader)')
+                ->placeholder('https://...')
+                ->value($post ? (string) ($post->media_url ?? '') : '')
+        );
+
+        if ($post !== null && is_string($post->media_url) && $post->media_url !== '') {
+            $mediaSection->add(
+                UI::label('lbl_current_media')
+                    ->text("📎 Archivo multimedia actual: {$post->media_url}")
+                    ->fontSize('12px')
+            );
+        }
+
+        $tabsContainer->add($mediaSection, tab: 'tab_media');
+        $container->add($tabsContainer);
+
+        // ================= BOTONES DE ACCIÓN =================
         $buttonsContainer = UI::container('dialog_buttons')
             ->layout(LayoutType::HORIZONTAL)
             ->justifyContent(JustifyContent::END)

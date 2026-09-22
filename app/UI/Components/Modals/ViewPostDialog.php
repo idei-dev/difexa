@@ -3,11 +3,15 @@
 namespace App\UI\Components\Modals;
 
 use App\Enums\PostStatus;
+use App\Enums\PostType;
 use App\Models\Post;
+use App\UI\Components\Presenters\PostMediaPresenter;
+use Idei\Usim\Components\Textarea;
 use Idei\Usim\Enums\JustifyContent;
 use Idei\Usim\Enums\LayoutType;
 use Idei\Usim\UI;
 use Idei\Usim\UIChangesCollector;
+use Idei\Usim\ValueObjects\Size;
 use Idei\Usim\ValueObjects\Spacing;
 
 class ViewPostDialog
@@ -45,7 +49,8 @@ class ViewPostDialog
             ->parent('modal')
             ->shadow(false)
             ->plain()
-            ->padding(Spacing::px(10))
+            ->width(Size::px(720))
+            ->padding(Spacing::px(14))
             ->gap(Spacing::px(12));
 
         if (!$post) {
@@ -55,6 +60,8 @@ class ViewPostDialog
 
             return $container->toJson();
         }
+
+        $mediaPresenter = new PostMediaPresenter();
 
         $container->add(
             UI::label('dialog_title')
@@ -78,7 +85,7 @@ class ViewPostDialog
         $container->add($infoRow);
 
         $dates = $post->starts_at->format('d/m/Y H:i') . ' al ' . $post->ends_at->format('d/m/Y H:i');
-        $kioskInfo = "{$post->display_duration_sec} segundos" . ($post->is_public ? ' | 🌐 Difusión Pública (Todos los Kiosks)' : ' | 📍 Sólo Kiosks de la Unidad');
+        $kioskInfo = "{$post->display_duration_sec} segs" . ($post->is_public ? ' | 🌐 Todos los Kiosks' : ' | 📍 Kiosks de la Unidad');
 
         $scheduleRow = UI::container('post_schedule_info')
             ->layout(LayoutType::HORIZONTAL)
@@ -90,18 +97,30 @@ class ViewPostDialog
 
         $container->add($scheduleRow);
 
-        if ($post->content) {
+        // Renderizado multimedia según tipo de publicación
+        if ($post->type->isMedia()) {
             $container->add(
-                UI::label('lbl_content_title')->text('Contenido:')->bold()
+                UI::label('lbl_media_preview_title')->text('Vista Previa Multimedia:')->bold()
             );
+
             $container->add(
-                UI::label('lbl_content_body')->text((string) $post->content)
+                UI::label('dialog_media_preview')
+                    ->html($mediaPresenter->renderMediaForPost($post, 320))
             );
         }
 
-        if ($post->media_url) {
+        // Cuerpo del mensaje utilizando Textarea
+        if ($post->content !== null && trim($post->content) !== '') {
             $container->add(
-                UI::label('lbl_media_url')->text("🔗 Multimedia: {$post->media_url}")
+                (new Textarea('dialog_post_content'))
+                    ->label('Cuerpo del Mensaje / Detalle')
+                    ->value((string) $post->content)
+                    ->readonly(true)
+                    ->height(Size::px(110))
+            );
+        } elseif ($post->type === PostType::TEXT) {
+            $container->add(
+                UI::label('lbl_no_text')->text('Esta publicación de texto no contiene cuerpo adicional.')
             );
         }
 

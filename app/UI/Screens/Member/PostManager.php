@@ -8,6 +8,7 @@ use App\Models\User;
 use App\UI\Components\Modals\EditPostDialog;
 use App\UI\Screens\Admin\Concerns\HandlesScreenParameters;
 use App\UI\Screens\Admin\Concerns\ResolvesActiveUnitContext;
+use App\UI\Screens\Member\Concerns\HandlesPostMediaUpload;
 use App\UI\Screens\Member\TableModels\MemberPostTableModel;
 use Idei\Usim\Components\Button;
 use Idei\Usim\Components\Container;
@@ -27,6 +28,7 @@ use Throwable;
 class PostManager extends Screen
 {
     use HandlesScreenParameters;
+    use HandlesPostMediaUpload;
     use ResolvesActiveUnitContext;
 
     protected Table $posts_table;
@@ -174,23 +176,31 @@ class PostManager extends Screen
 
         $postId = $this->optionalIntParam($params, 'post_id');
         $submitNow = $this->boolParamOrDefault($params, 'submit_now', false);
-
-        $data = [
-            'title' => $this->stringParamOrDefault($params, 'post_title', ''),
-            'content' => $this->optionalStringParam($params, 'post_content'),
-            'type' => $this->stringParamOrDefault($params, 'post_type', 'text'),
-            'media_url' => $this->optionalStringParam($params, 'post_media_url'),
-            'starts_at' => $this->stringParamOrDefault($params, 'post_starts_at', now()->toDateTimeString()),
-            'ends_at' => $this->stringParamOrDefault($params, 'post_ends_at', now()->addDays(7)->toDateTimeString()),
-            'display_duration_sec' => $this->intParamOrDefault($params, 'post_display_duration_sec', 10),
-            'is_public' => $this->boolParamOrDefault($params, 'post_is_public', false),
-            'submit_now' => $submitNow,
-        ];
+        $postType = $this->stringParamOrDefault($params, 'post_type', 'text');
 
         try {
+            $existingPost = null;
             if ($postId !== null && $postId > 0) {
-                $post = Post::findOrFail($postId);
-                $this->postService->update($post, $data, $user);
+                $existingPost = Post::find($postId);
+            }
+
+            $media = $this->resolvePostMedia($params, $postType, $existingPost);
+
+            $data = [
+                'title' => $this->stringParamOrDefault($params, 'post_title', ''),
+                'content' => $this->optionalStringParam($params, 'post_content'),
+                'type' => $postType,
+                'media_url' => $media['media_url'],
+                'media_mime' => $media['media_mime'],
+                'starts_at' => $this->stringParamOrDefault($params, 'post_starts_at', now()->toDateTimeString()),
+                'ends_at' => $this->stringParamOrDefault($params, 'post_ends_at', now()->addDays(7)->toDateTimeString()),
+                'display_duration_sec' => $this->intParamOrDefault($params, 'post_display_duration_sec', 10),
+                'is_public' => $this->boolParamOrDefault($params, 'post_is_public', false),
+                'submit_now' => $submitNow,
+            ];
+
+            if ($existingPost !== null) {
+                $this->postService->update($existingPost, $data, $user);
                 $message = $submitNow ? 'Publicación actualizada y enviada a revisión.' : 'Publicación actualizada como borrador.';
             } else {
                 $unit = $this->resolveActiveUnit();
