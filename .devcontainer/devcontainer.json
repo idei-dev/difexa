@@ -1,5 +1,9 @@
 {
-    "name": "USIM Framework Dev Container",
+    "name": "Difexa DevContainer",
+    "runArgs": [
+        "--name",
+        "difexa-devcontainer"
+    ],
     "dockerFile": "Dockerfile",
     "shutdownAction": "none",
     "forwardPorts": [
